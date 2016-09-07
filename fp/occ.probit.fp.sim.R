@@ -22,7 +22,7 @@ qW <- dim(W)[2]
 for(i in 1:J){
 	W[,2,i] <- rnorm(n)
 }
-alpha <- matrix(c(-0.5,-1),2,1)  # coefficients for detection
+alpha <- matrix(c(0.5,0.5),2,1)  # coefficients for detection
 p <- apply(W,3,function(x) pnorm(x%*%alpha))  # detection probability
 summary(p)
 
@@ -90,13 +90,16 @@ out3 <- occ.probit.1.mcmc(Y.tilde,W,X,priors,start,10000)  # fit model
 library(lattice)
 
 n.mcmc <- 10000
-beta.sum <- data.frame(post=c(out1$beta[,1],out2$beta[,1],out3$beta[,1],
-	out1$beta[,2],out2$beta[,2],out3$beta[,2]),beta=c(rep("beta0",n.mcmc*3),rep("beta1",n.mcmc*3)),
-	model=rep(c(rep("standard",n.mcmc),rep("fp",n.mcmc),rep("ignore fp",n.mcmc)),2))
-beta.sum$model <- ordered(beta.sum$model,levels=c("standard","fp","ignore fp"))
+est <- data.frame(post=c(
+	out1$beta[,1],out2$beta[,1],out3$beta[,1],out1$beta[,2],out2$beta[,2],out3$beta[,2],
+	out1$alpha[,1],out2$alpha[,1],out3$alpha[,1],out1$alpha[,2],out2$alpha[,2],out3$alpha[,2]),
+	param=c(rep("beta0",n.mcmc*3),rep("beta1",n.mcmc*3),
+	rep("alpha0",n.mcmc*3),rep("alpha1",n.mcmc*3)),
+	model=rep(c(rep("no fp",n.mcmc),rep("fp",n.mcmc),rep("ignore fp",n.mcmc)),4))
+est$model <- ordered(est$model,levels=c("no fp","fp","ignore fp"))
 
-bwplot(post~model|beta,data=beta.sum,panel=function(x,y,...){
+bwplot(post~model|param,data=est,panel=function(x,y,...){
 	panel.violin(x,y,col="lightgray",...)		
-	panel.abline(h=beta[panel.number()],lty=2)
+	panel.abline(h=c(alpha,beta)[panel.number()],lty=2)
 })
 	
