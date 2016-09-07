@@ -100,7 +100,7 @@ occ.probit.fp.mcmc <- function(Y,W,X,controls,priors,start,n.mcmc){
 		###
 		###  Sample psi
 		###
-
+# browser()
 		A <- solve(t(X)%*%X+solve(Sigma.beta))
 		b <- t(X)%*%v+solve(Sigma.beta)%*%mu.beta
 		beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
@@ -114,19 +114,20 @@ occ.probit.fp.mcmc <- function(Y,W,X,controls,priors,start,n.mcmc){
 		
 		idx1 <- which(Y.long==1&z1)
 		idx0 <- which(Y.long==0&z1)	
-		u[idx1] <- truncnormsamp((matrix(W.long[idx1,],,qW)%*%alpha),1,0,Inf,length(idx1))			
+		u[idx1] <- truncnormsamp((matrix(W.long[idx1,],,qW)%*%alpha),1,0,Inf,length(idx1))		
 		u[idx0] <- truncnormsamp((matrix(W.long[idx0,],,qW)%*%alpha),1,-Inf,0,length(idx0))
 	
 		
 		###
 		###  Sample p (alpha) 
 		###
-
+# browser()
 		u.tmp <- u[z1]
 		W.tmp <- W.long[z1,]		
 		A <- solve(t(W.tmp)%*%W.tmp+solve(Sigma.alpha))
-		b <- u.tmp%*%W.tmp+t(mu.alpha)%*%solve(Sigma.alpha)
-		alpha <- A%*%t(b)+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
+		b <- t(W.tmp)%*%u.tmp+solve(Sigma.alpha)%*%mu.alpha
+		alpha <- A%*%b+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
+		# alpha <- t(rmvnorm(1,A%*%b,A))
 		p <- matrix(apply(W.long,1,function(x) pnorm(x%*%alpha)),,max(J))
 
 		

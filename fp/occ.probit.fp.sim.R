@@ -32,7 +32,7 @@ Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
 
 # Fit standard occupancy model
 source("static/occ.probit.1.mcmc.R")
-start <- list(beta=rep(0,qX),alpha=rep(0,qW))  # starting values
+start <- list(beta=beta,alpha=alpha)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	Sigma.beta=diag(qX)*10,Sigma.alpha=diag(qW)*10)
 out1 <- occ.probit.1.mcmc(Y,W,X,priors,start,10000)  # fit model
@@ -61,9 +61,9 @@ Y.tilde[z0,] <- rbinom(J*length(z0),1,pi)
 
 # Fit false-positive occupancy model
 source("fp/occ.probit.fp.mcmc.R")
-start <- list(beta=rep(0,qX),alpha=rep(0,qW))  # starting values
+start <- list(beta=beta,alpha=alpha)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-	Sigma.beta=diag(qX)*10,Sigma.alpha=diag(qW)*10,a=1,b=1)
+	Sigma.beta=diag(qX)*10,Sigma.alpha=diag(qW)*10,a=2,b=10)
 out2 <- occ.probit.fp.mcmc(Y.tilde,W,X,controls,priors,start,10000)  # fit model
 
 # Examine output
@@ -77,7 +77,7 @@ hist(out2$pi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
 
 # Fit model ignoring false positives
 source("static/occ.probit.1.mcmc.R")
-start <- list(beta=rep(0,qX),alpha=rep(0,qW))  # starting values
+start <- list(beta=beta,alpha=alpha)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	Sigma.beta=diag(qX)*10,Sigma.alpha=diag(qW)*10)
 out3 <- occ.probit.1.mcmc(Y.tilde,W,X,priors,start,10000)  # fit model
@@ -98,8 +98,9 @@ est <- data.frame(post=c(
 	model=rep(c(rep("no fp",n.mcmc),rep("fp",n.mcmc),rep("ignore fp",n.mcmc)),4))
 est$model <- ordered(est$model,levels=c("no fp","fp","ignore fp"))
 
-bwplot(post~model|param,data=est,panel=function(x,y,...){
-	panel.violin(x,y,col="lightgray",...)		
-	panel.abline(h=c(alpha,beta)[panel.number()],lty=2)
+bwplot(post~model|param,data=est,scales=list(relation="free",y=list(rot=0)),ylab="Posterior",
+	panel=function(x,y,...){
+		panel.violin(x,y,col="lightgray",...)		
+		panel.abline(h=c(alpha,beta)[panel.number()],lty=2,col=1)
 })
 	
