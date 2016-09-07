@@ -7,7 +7,7 @@ rm(list=ls())
 ###
 
 n <- 100  # number of individuals
-J <- 20  # number of samples per individual
+J <- 8  # number of samples per individual
 
 # Heterogeneity in occupancy
 X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy
