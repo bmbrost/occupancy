@@ -154,7 +154,7 @@ occ.probit.1.mcmc <- function(Y,W,X,priors,start,n.mcmc){
 	###  Write output 
 	###
 	
-	list(beta.save=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,
+	list(beta=beta.save,alpha=alpha.save,N=N.save,z.mean=z.mean,
 	Y=Y,W=W,X=X,priors=priors,start=start,n.mcmc=n.mcmc)
 }
 

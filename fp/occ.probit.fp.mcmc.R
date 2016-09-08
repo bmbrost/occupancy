@@ -45,7 +45,7 @@ occ.probit.fp.mcmc <- function(Y,W,X,controls,priors,start,n.mcmc){
 	pos <- controls$positive
 	neg <- controls$N-pos
 	
-		
+    		
 	###
 	###  Priors
 	###
@@ -75,7 +75,7 @@ occ.probit.fp.mcmc <- function(Y,W,X,controls,priors,start,n.mcmc){
 	pi.save <- numeric(n.mcmc)
 	
 	###
-	###  Begin MCMC Loop 
+	###  Begin MCMC loop 
 	###
 	
 	for(k in 1:n.mcmc){
@@ -164,7 +164,7 @@ occ.probit.fp.mcmc <- function(Y,W,X,controls,priors,start,n.mcmc){
 	###  Write output 
 	###
 	
-	list(beta.save=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,pi=pi.save,
+	list(beta=beta.save,alpha=alpha.save,N=N.save,z.mean=z.mean,pi=pi.save,
 		Y=Y,W=W,X=X,q=q,priors=priors,start=start,n.mcmc=n.mcmc)
 }
 

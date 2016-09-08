@@ -38,12 +38,12 @@ priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution param
 out1 <- occ.probit.1.mcmc(Y,W,X,priors,start,10000)  # fit model
 
 # Examine output
-matplot(out1$beta.save,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out1$alpha.save,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out1$beta.save,2,mean)  # posterior means for beta
-apply(out1$alpha.save,2,mean)  # posterior means for alpha
+matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out1$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
+apply(out1$beta,2,mean)  # posterior means for beta
+apply(out1$alpha,2,mean)  # posterior means for alpha
 boxplot(out1$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out1$N.save));sum(z)  # posterior of number in 'occupied' state
+barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
 
 
 ###
@@ -73,12 +73,12 @@ priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution param
 out2 <- occ.probit.fp.mcmc(Y.tilde,W,X,controls,priors,start,10000)  # fit model
 
 # Examine output
-matplot(out2$beta.save,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$alpha.save,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out2$beta.save,2,mean)  # posterior means for beta
-apply(out2$alpha.save,2,mean)  # posterior means for alpha
+matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out2$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
+apply(out2$beta,2,mean)  # posterior means for beta
+apply(out2$alpha,2,mean)  # posterior means for alpha
 boxplot(out2$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out2$N.save));sum(z)  # posterior of number in 'occupied' state
+barplot(table(out2$N));sum(z)  # posterior of number in 'occupied' state
 hist(out2$pi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
 
 # Fit model ignoring false positives
@@ -89,12 +89,12 @@ priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution param
 out3 <- occ.probit.1.mcmc(Y.tilde,W,X,priors,start,10000)  # fit model
 
 # Examine output
-matplot(out3$beta.save,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha.save,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out3$beta.save,2,mean)  # posterior means for beta
-apply(out3$alpha.save,2,mean)  # posterior means for alpha
+matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
+apply(out3$beta,2,mean)  # posterior means for beta
+apply(out3$alpha,2,mean)  # posterior means for alpha
 boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out3$N.save));sum(z)  # posterior of number in 'occupied' state
+barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
 hist(out3$pi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
 
 ###
