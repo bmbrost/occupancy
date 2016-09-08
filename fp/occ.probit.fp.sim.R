@@ -88,6 +88,14 @@ priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution param
 	Sigma.beta=diag(qX)*10,Sigma.alpha=diag(qW)*10)
 out3 <- occ.probit.1.mcmc(Y.tilde,W,X,priors,start,10000)  # fit model
 
+# Examine output
+matplot(out3$beta.save,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out3$alpha.save,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
+apply(out3$beta.save,2,mean)  # posterior means for beta
+apply(out3$alpha.save,2,mean)  # posterior means for alpha
+boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
+barplot(table(out3$N.save));sum(z)  # posterior of number in 'occupied' state
+hist(out3$pi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
 
 ###
 ### Compare models
@@ -109,4 +117,14 @@ bwplot(post~model|param,data=est,scales=list(relation="free",y=list(rot=0)),ylab
 		panel.violin(x,y,col="lightgray",...)		
 		panel.abline(h=c(alpha,beta)[panel.number()],lty=2,col=1)
 })
-	
+
+
+
+
+
+source("fp/test.R")
+start <- list(beta=beta,alpha=alpha)  # starting values
+priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
+	Sigma.beta=diag(qX)*10,Sigma.alpha=diag(qW)*10,a=2,b=10)
+out4 <- test(Y.tilde,W,X,controls,priors,start,10000)  # fit model
+out3 <- out4
