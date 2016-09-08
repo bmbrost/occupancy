@@ -117,7 +117,7 @@ occ.probit.1.mcmc <- function(Y,W,X,priors,start,n.mcmc){
 
 		
 		###
-		###  Sample p (alpha) 
+		###  Sample p 
 		###
 
 		u.tmp <- u[z1]

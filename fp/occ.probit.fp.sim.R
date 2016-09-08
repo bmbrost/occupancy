@@ -59,6 +59,12 @@ Y.tilde <- Y
 z0 <- which(z==0)
 Y.tilde[z0,] <- rbinom(J*length(z0),1,pi)
 
+z1 <- which(z==1)
+for(i in z1){
+	idx0 <- which(Y.tilde[i,]==0)
+	Y.tilde[i,idx0] <- rbinom(length(idx0),1,pi)
+}
+
 # Fit false-positive occupancy model
 source("fp/occ.probit.fp.mcmc.R")
 start <- list(beta=beta,alpha=alpha)  # starting values

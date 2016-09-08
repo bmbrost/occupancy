@@ -119,7 +119,7 @@ occ.probit.fp.mcmc <- function(Y,W,X,controls,priors,start,n.mcmc){
 	
 		
 		###
-		###  Sample p (alpha) 
+		###  Sample p
 		###
 # browser()
 		u.tmp <- u[z1]
