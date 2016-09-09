@@ -47,7 +47,7 @@ barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
 
 
 ###
-### Simulate 'single-season' occupancy with false positives
+### Add false positives to data set
 ###
 
 pi <- 0.09  # probability of false positive
@@ -55,15 +55,23 @@ controls <- rbinom(50,1,pi)  # negative control data set
 controls <- list(positive=sum(controls),N=length(controls))  # summarize negative controls
 
 # Add false positives to dataset
-Y.tilde <- Y
-z0 <- which(z==0)
-Y.tilde[z0,] <- rbinom(J*length(z0),1,pi)
 
-z1 <- which(z==1)
-for(i in z1){
-	idx0 <- which(Y.tilde[i,]==0)
-	Y.tilde[i,idx0] <- rbinom(length(idx0),1,pi)
-}
+Q <- matrix(0,n,J)  # false positive indicator variables
+idx0 <- which(Y==0)
+Q[idx0] <- rbinom(length(idx0),1,pi)
+Y.tilde <- Y+Q  # add false positives to data set
+rowSums(Y.tilde[z0,])
+rowSums(Y.tilde[z1,])
+
+# Y.tilde <- Y
+# z0 <- which(z==0)
+# Y.tilde[z0,] <- rbinom(J*length(z0),1,pi)
+
+# z1 <- which(z==1)
+# for(i in z1){
+	# idx0 <- which(Y.tilde[i,]==0)
+	# Y.tilde[i,idx0] <- rbinom(length(idx0),1,pi)
+# }
 
 # Fit false-positive occupancy model
 source("fp/occ.probit.fp.mcmc.R")
