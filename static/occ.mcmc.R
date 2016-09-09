@@ -1,4 +1,4 @@
-occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
+occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 #
 #  Mevin Hooten (20111031), Last Updated: 20131029
@@ -19,6 +19,13 @@ occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
 	logit <- function(expit){
 		log(expit/(1-expit))
 	}
+
+	get.tune <- function(tune,keep,k,target=0.44){  # adaptive tuning
+		# a <- min(0.01,1/sqrt(k))
+		a <- min(0.025,1/sqrt(k))
+		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
+	}
+
 	
 	###
 	###  Create variables 
@@ -67,7 +74,9 @@ occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
 
 	keep <- list(beta=0,alpha=0)
 	keep.tmp <- keep
+	Tb <- 50  # frequency of adaptive tuning
 	
+		
 	###
 	###  Begin MCMC loop 
 	###
@@ -79,12 +88,19 @@ occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
 		### Adaptive tuning
 		###
 		
+		if(adapt==TRUE & k%%Tb==0) {  # Adaptive tuning
+			keep.tmp <- lapply(keep.tmp,function(x) x/Tb)
+			tune$beta <- get.tune(tune$beta,keep.tmp$beta,k)
+			tune$alpha <- get.tune(tune$alpha,keep.tmp$alpha,k)
+			keep.tmp <- lapply(keep.tmp,function(x) x*0)
+	   	} 	
+
 		
 	  	###
-		###  Sample beta 
+		###  Sample beta (psi)
 	  	###
 	
-	  	beta.star <- rnorm(qX,beta,beta.tune)
+	  	beta.star <- rnorm(qX,beta,tune$beta)
 		psi.star <- expit(X%*%beta.star)
 		mh.star <- sum(dbinom(z,1,psi.star,log=TRUE))+
 			sum(dnorm(beta.star,mu.beta,sigma.beta,log=TRUE))
@@ -98,22 +114,16 @@ occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
 
 	
 		###
-	  	###  Sample p 
+	  	###  Sample p (alpha)
 	  	###
 # browser()
 		z1 <- z==1	
-
-	  	alpha.star <- rnorm(qW,alpha,alpha.tune)
+	  	alpha.star <- rnorm(qW,alpha,tune$alpha)
 	  	p.star <- apply(W,3,function(x) expit(x%*%alpha.star))	 	
 	 	mh.star <- sum(dbinom(Y[z1,],1,p.star[z1,],log=TRUE))
 	 		+sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 	 	mh.0 <- sum(dbinom(Y[z1,],1,p[z1,],log=TRUE))
 	 		+sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
-
-	 	# mh.star <- sum(dbinom(Y.long[idx1],1,p.star[idx1],log=TRUE))
-	 		# +sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-	 	# mh.0 <- sum(dbinom(Y.long[idx1],1,p[idx1],log=TRUE))
-	 		# +sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
 		if(exp(mh.star-mh.0) > runif(1)){
 			alpha <- alpha.star
 			p <- p.star
@@ -128,7 +138,7 @@ occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
 
 		p0.tmp <- psi*apply(p^Y*(1-p)^(1-Y),1,prod)
 		psi.tmp <- p0.tmp/(p0.tmp+(1-psi))	
-		# z[y0] <- rbinom(n.y0,1,psi.tmp[y0])
+		z[y0] <- rbinom(n.y0,1,psi.tmp[y0])
 	
 	
 		###
@@ -146,7 +156,10 @@ occ.mcmc <- function(Y,W,X,priors,start,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
 	###
 	###  Write output 
 	###
+
+	keep <- lapply(keep,function(x) x/n.mcmc)
+	end <- list(beta=beta,alpha=alpha,z=z)  # starting values
 	
-	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,
-		Y=Y,X=X,W=W,priors=priors,start=start,n.mcmc=n.mcmc)
+	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,keep=keep,end=end,
+		Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
