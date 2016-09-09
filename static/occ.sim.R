@@ -26,7 +26,7 @@ qW <- dim(W)[2]
 for(i in 1:J){
 	W[,2,i] <- rnorm(n)
 }
-alpha <- matrix(c(0.5,0.5),2,1)  # coefficients for detection
+alpha <- matrix(c(-1.5,0.5),2,1)  # coefficients for detection
 p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
 summary(p)
 
@@ -43,7 +43,8 @@ source("static/occ.mcmc.R")
 start <- list(beta=beta,alpha=alpha,z=z)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	sigma.beta=10,sigma.alpha=10)
-out1 <- occ.mcmc(Y,W,X,priors,start,1000,alpha.tune=0.1,beta.tune=0.1)  # fit model
+tune <- list(beta=0.1,alpha=0.1)
+out1 <- occ.mcmc(Y,W,X,priors,start,tune,1000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
