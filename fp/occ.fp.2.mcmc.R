@@ -26,8 +26,8 @@ occ.fp.2.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
 	}
 
-	Y.z1.lik <- function(y,p,phi){
-		(1-phi)*p^y*(1-p)^(1-y)+phi^y
+	y.loglik <- function(y,p,phi){
+		(1-phi)*p^y*(1-p)^(1-y)+phi*y
 	}
 	
 	###
