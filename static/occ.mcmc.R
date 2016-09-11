@@ -38,8 +38,6 @@ occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	y <- apply(Y,1,sum,na.rm=TRUE)
 	y0 <- which(y==0)
 	n.y0 <- length(y0)
-# Y.long <- c(Y)
-# W.long <- apply(W,2,I)
 
 	
 	###
@@ -58,11 +56,11 @@ occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	beta <- as.vector(start$beta)
 	alpha <- as.vector(start$alpha)
-	z <- start$z
+	z <- ifelse(y>0,1,0)
 	psi <- expit(X%*%beta)
 	p <- apply(W,3,function(x) expit(x%*%alpha))
 	
-	
+
 	###
 	###  Create receptacles for output
 	###
@@ -99,12 +97,12 @@ occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	  	###
 		###  Sample beta (psi)
 	  	###
-	
+# browser()
 	  	beta.star <- rnorm(qX,beta,tune$beta)
 		psi.star <- expit(X%*%beta.star)
 		mh.star <- sum(dbinom(z,1,psi.star,log=TRUE))+
 			sum(dnorm(beta.star,mu.beta,sigma.beta,log=TRUE))
-		mh.0 <- sum(dbinom(z,1,psi,log=TRUE))	+sum(dnorm(beta,mu.beta,sigma.beta,log=TRUE))
+		mh.0 <- sum(dbinom(z,1,psi,log=TRUE))+sum(dnorm(beta,mu.beta,sigma.beta,log=TRUE))
 		if(exp(mh.star-mh.0) > runif(1)){
 			beta <- beta.star
 			psi <- psi.star
