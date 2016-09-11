@@ -27,10 +27,14 @@ W <- array(1,dim=c(n,2,J))  # design matrix for detection
 qW <- dim(W)[2]
 for(i in 1:J){
 	W[,2,i] <- rnorm(n)
+	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)
 }
 alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection
+# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection
 p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
 summary(p)
+
+# summary(p[W[,3,1]==1,1])
 
 # State process and observations
 z <- rbinom(n,1,psi)  # simulated occupancy state
@@ -198,7 +202,7 @@ for(i in 1:n.sim){
 	source("static/occ.mcmc.R")
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-		sigma.beta=10,sigma.alpha=10)
+		sigma.beta=2,sigma.alpha=2)
 	tune <- list(beta=0.35,alpha=0.1)
 	out1 <- occ.mcmc(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 	
@@ -210,7 +214,7 @@ for(i in 1:n.sim){
 	source("fp/occ.fp.2.mcmc.R")
 	start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-		sigma.beta=10,sigma.alpha=10)
+		sigma.beta=2,sigma.alpha=2)
 	tune <- list(beta=0.35,alpha=0.1)
 	out2 <- occ.fp.2.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 		
@@ -222,11 +226,19 @@ for(i in 1:n.sim){
 	source("static/occ.mcmc.R")
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-		sigma.beta=10,sigma.alpha=10)
+		sigma.beta=2,sigma.alpha=2)
 	tune <- list(beta=0.35,alpha=0.1)
 	out3 <- occ.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 
 	
+	###
+	### Other modeling options to pursue
+	###
+	
+	# Threshold values of y_i to determine unoccupied individuals
+	# Threshold values of y_i to create presence/absence data and model with logistic regression
+	# Others...
+
 	###
 	### Summarize results
 	###
