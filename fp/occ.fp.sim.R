@@ -30,10 +30,10 @@ for(i in 1:J){
 	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)
 }
 alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection
+# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection
 # alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection
 p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
 summary(p)
-
 # summary(p[W[,3,1]==1,1])
 
 # State process and observations
@@ -71,12 +71,12 @@ barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
 ### Fit false positive occupancy model to dataset with false positives
 ###
 
-source("fp/occ.fp.2.mcmc.R")
+source("fp/occ.fp.marginal.lik.mcmc.R")
 start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	sigma.beta=10,sigma.alpha=10)
 tune <- list(beta=0.35,alpha=0.1)
-out2 <- occ.fp.2.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
+out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
@@ -117,10 +117,8 @@ n.mcmc <- 10000
 
 # Stack posteriors from all models
 post <- unlist(lapply(list(out1,out2,out3),function(x) c(c(x$beta),c(x$alpha))))
-
-est <- data.frame(post,param=rep(c(rep("beta0",n.mcmc),rep("beta1",n.mcmc),
-	rep("alpha0",n.mcmc),rep("alpha1",n.mcmc)),3),
-	model=c(rep("no fp",n.mcmc*4),rep("fp",n.mcmc*4),rep("ignore fp",n.mcmc*4)))
+est <- data.frame(post,param=rep(rep(c("beta0","beta1","alpha0","alpha1"),each=n.mcmc),3),
+	model=rep(c("no fp","fp","ignore fp"), each=n.mcmc*4))
 est$model <- ordered(est$model,levels=c("no fp","fp","ignore fp"))
 
 bwplot(post~model|param,data=est,scales=list(relation="free",y=list(rot=0)),ylab="Posterior",
@@ -148,8 +146,8 @@ sim.sum <- function(out,mod,i){
 	tmp
 }
 
-n.mcmc <- 5000  # number of MCMC iterations to perform for each model
-n.sim <- 100
+n.mcmc <- 10000  # number of MCMC iterations to perform for each model
+n.sim <- 1000
 for(i in 1:n.sim){
 
 	cat("\n")
@@ -176,9 +174,14 @@ for(i in 1:n.sim){
 	for(j in 1:J){
 		W[,2,j] <- rnorm(n)
 	}
-	alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection
+
+	alpha <- matrix(c(-1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}
+	# alpha <- matrix(c(0.25,0.25),2,1)  # coefficients for detection; biased beta p\in{0.3,0.7}
+	# alpha <- matrix(c(0,-0.5),2,1)  # coefficients for detection; biased beta p\in{0.2,0.8}
+	# alpha <- matrix(c(2,0.5),2,1)  # coefficients for detection; unbiased beta p\in{0.65,0.97}
+	# alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.2,0.95}
 	p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
-	summary(p)
+	# summary(p)
 	
 	# State process and observations
 	z <- rbinom(n,1,psi)  # simulated occupancy state
@@ -203,7 +206,7 @@ for(i in 1:n.sim){
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=2,sigma.alpha=2)
-	tune <- list(beta=0.35,alpha=0.1)
+	tune <- list(beta=0.45,alpha=0.1)
 	out1 <- occ.mcmc(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 	
 
@@ -211,12 +214,12 @@ for(i in 1:n.sim){
 	### Fit false-positive occupancy model to dataset with false positives
 	###
 	
-	source("fp/occ.fp.2.mcmc.R")
+	source("fp/occ.fp.marginal.lik.mcmc.R")
 	start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=2,sigma.alpha=2)
-	tune <- list(beta=0.35,alpha=0.1)
-	out2 <- occ.fp.2.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
+	tune <- list(beta=0.45,alpha=0.1)
+	out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 		
 	
 	###
@@ -227,7 +230,7 @@ for(i in 1:n.sim){
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=2,sigma.alpha=2)
-	tune <- list(beta=0.35,alpha=0.1)
+	tune <- list(beta=0.45,alpha=0.1)
 	out3 <- occ.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 
 	

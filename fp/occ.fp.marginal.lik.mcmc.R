@@ -1,4 +1,4 @@
-occ.fp.2.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 #
 #  Mevin Hooten (20111031), Last Updated: 20131029
