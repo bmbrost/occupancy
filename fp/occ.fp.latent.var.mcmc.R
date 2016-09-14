@@ -44,7 +44,7 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	y <- apply(Y,1,sum,na.rm=TRUE)
 	y0 <- which(y==0)
 	n.y0 <- length(y0)
-
+	Y0 <- ifelse(Y==1,0,1)		
 	
 	###
 	###  Priors
@@ -59,13 +59,13 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	###
 	###  Starting values 
 	###
-	
+# browser()	
 	beta <- as.vector(start$beta)
 	alpha <- as.vector(start$alpha)
 	z <- start$z
 	psi <- expit(X%*%beta)
 	p <- apply(W,3,function(x) expit(x%*%alpha))
-	
+	Q <- start$Q	
 	
 	###
 	###  Create receptacles for output
@@ -75,6 +75,7 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	alpha.save <- matrix(0,n.mcmc,qW)
 	z.mean <- numeric(n)
 	N.save <- numeric(n.mcmc)
+	Q.mean <- matrix(0,n,ncol(Y))
 
 	keep <- list(beta=0,alpha=0)
 	keep.tmp <- keep
@@ -124,14 +125,14 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		z1 <- z==1	
 	  	alpha.star <- rnorm(qW,alpha,tune$alpha)
 	  	p.star <- apply(W,3,function(x) expit(x%*%alpha.star))	 	
-	 	mh.star <- sum(y.lik(Y[z1,],p.star[z1,],phi,log=TRUE))
-	 		+sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-			# sum(log((1-phi)*dbinom(Y[z1,],1,p.star[z1,])+phi*Y[z1,]))
-	 		# sum(log((1-phi)*p.star[z1,]^Y[z1,]*(1-p.star[z1,])^(1-Y[z1,])+phi*Y[z1,]))
-	 	mh.0 <-	sum(y.lik(Y[z1,],p[z1,],phi,log=TRUE))
-	 		+sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
-			# sum(log((1-phi)*dbinom(Y[z1,],1,p[z1,])+phi*Y[z1,]))
-	 		# sum(log((1-phi)*p[z1,]^Y[z1,]*(1-p[z1,])^(1-Y[z1,])+phi*Y[z1,]))
+	 	mh.star <- sum(log((dbinom(Y[z1,],1,p.star[z1,])^(1-Q[z1,]))))+
+	 		sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
+	 	mh.0 <-	sum(log((dbinom(Y[z1,],1,p[z1,])^(1-Q[z1,]))))+
+	 		sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
+	 	# mh.star <- sum(log((dbinom(Y,1,p.star)^(1-Q))^z))+
+	 		# sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
+	 	# mh.0 <-	sum(log((dbinom(Y,1,p)^(1-Q))^z))+
+	 		# sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
 		if(exp(mh.star-mh.0) > runif(1)){
 			alpha <- alpha.star
 			p <- p.star
@@ -141,12 +142,22 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	 
 		###
+		### Sample Q
+		###
+
+# browser()
+		p1 <- phi*Y^z*Y^(1-z)
+		p0 <- (1-phi)*(p^Y*(1-p)^(1-Y))^z*Y0^(1-z)
+		phi.tmp <- p1/(p1+p0)
+		Q <- apply(phi.tmp,2,function(x) rbinom(n,1,x))
+		# matrix(rbinom(n*ncol(Y),1,phi.tmp),n)
+		
+		###
 	  	###  Sample z 
 	  	###
 # browser()
-		p1 <- psi*apply(y.lik(Y,p,phi),1,prod)
-		# p1 <- psi*apply((1-phi)*p^Y*(1-p)^(1-Y)+phi*Y,1,prod)
-		p0 <- (1-psi)*apply(phi^Y*(1-phi)^(1-Y),1,prod)
+		p1 <- psi*apply(Y^Q*p^Y*((1-p)^(1-Y))^(1-Q),1,prod)
+		p0 <- (1-psi)*apply(Y0^(1-Q)*Y^Q,1,prod)
 		psi.tmp <- p1/(p1+p0)	
 		z <- rbinom(n,1,psi.tmp)
 
@@ -159,6 +170,7 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	  	alpha.save[k,] <- alpha
 	  	z.mean <- z.mean+z/n.mcmc
 	  	N.save[k] <- sum(z)
+	  	Q.mean <- Q.mean+Q
 	
 	}
 	cat("\n")
@@ -167,9 +179,12 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	###  Write output 
 	###
 
-	keep <- lapply(keep,function(x) x/n.mcmc)
-	end <- list(beta=beta,alpha=alpha,z=z)  # starting values
+	z.mean <- z.mean/n.mcmc
+	Q.mean <- Q.mean/n.mcmc
 	
-	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,keep=keep,end=end,
-		Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
+	keep <- lapply(keep,function(x) x/n.mcmc)
+	end <- list(beta=beta,alpha=alpha,z=z,Q=Q,phi=phi)  # starting values
+	
+	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,Q.mean=Q.mean,
+		keep=keep,end=end,Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
