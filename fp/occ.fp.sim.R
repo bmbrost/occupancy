@@ -13,7 +13,7 @@ expit <- function(y){
 ###
 
 n <- 100  # number of individuals
-J <- 20  # number of samples per individual
+J <- 8  # number of samples per individual
 
 # Heterogeneity in occupancy
 X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy
@@ -29,7 +29,8 @@ for(i in 1:J){
 	W[,2,i] <- rnorm(n)
 	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)
 }
-alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection
+alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}
+# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection
 # alpha <- matrix(c(-1,1),2,1)  # coefficients for detection
 # alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection
 p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
@@ -56,7 +57,7 @@ start <- list(beta=beta,alpha=alpha)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	sigma.beta=10,sigma.alpha=10)
 tune <- list(beta=0.35,alpha=0.1)
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
+out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
@@ -71,12 +72,13 @@ barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
 ### Fit false positive occupancy model to dataset with false positives
 ###
 
+# Model with marginal likelihood
 source("fp/occ.fp.marginal.lik.mcmc.R")
 start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	sigma.beta=10,sigma.alpha=10)
 tune <- list(beta=0.35,alpha=0.1)
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
+out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
@@ -85,7 +87,28 @@ apply(out2$beta,2,mean)  # posterior means for beta
 apply(out2$alpha,2,mean)  # posterior means for alpha
 boxplot(out2$z.mean~z)  # true occupancy versus estimated occupancy
 barplot(table(out2$N));sum(z)  # posterior of number in 'occupied' state
-hist(out2$pi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
+hist(out2$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
+
+# Model with latent indicator variables
+source("fp/occ.fp.latent.var.mcmc.R")
+start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values
+priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
+	sigma.beta=10,sigma.alpha=10)
+tune <- list(beta=0.35,alpha=0.1)
+out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
+
+# Examine output
+matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
+apply(out3$beta,2,mean)  # posterior means for beta
+apply(out3$alpha,2,mean)  # posterior means for alpha
+boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
+barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
+hist(out3$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
+boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
+
+apply(out3$beta,2,quantile,c(0.025,0.975))
+apply(out3$alpha,2,quantile,c(0.025,0.975))
 
 
 ###

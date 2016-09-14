@@ -108,7 +108,8 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		psi.star <- expit(X%*%beta.star)
 		mh.star <- sum(dbinom(z,1,psi.star,log=TRUE))+
 			sum(dnorm(beta.star,mu.beta,sigma.beta,log=TRUE))
-		mh.0 <- sum(dbinom(z,1,psi,log=TRUE))	+sum(dnorm(beta,mu.beta,sigma.beta,log=TRUE))
+		mh.0 <- sum(dbinom(z,1,psi,log=TRUE))+
+			sum(dnorm(beta,mu.beta,sigma.beta,log=TRUE))
 		if(exp(mh.star-mh.0) > runif(1)){
 			beta <- beta.star
 			psi <- psi.star
@@ -124,12 +125,12 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		z1 <- z==1	
 	  	alpha.star <- rnorm(qW,alpha,tune$alpha)
 	  	p.star <- apply(W,3,function(x) expit(x%*%alpha.star))	 	
-	 	mh.star <- sum(y.lik(Y[z1,],p.star[z1,],phi,log=TRUE))
-	 		+sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
+	 	mh.star <- sum(y.lik(Y[z1,],p.star[z1,],phi,log=TRUE))+
+	 		sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 			# sum(log((1-phi)*dbinom(Y[z1,],1,p.star[z1,])+phi*Y[z1,]))
 	 		# sum(log((1-phi)*p.star[z1,]^Y[z1,]*(1-p.star[z1,])^(1-Y[z1,])+phi*Y[z1,]))
-	 	mh.0 <-	sum(y.lik(Y[z1,],p[z1,],phi,log=TRUE))
-	 		+sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
+	 	mh.0 <-	sum(y.lik(Y[z1,],p[z1,],phi,log=TRUE))+
+	 		sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
 			# sum(log((1-phi)*dbinom(Y[z1,],1,p[z1,])+phi*Y[z1,]))
 	 		# sum(log((1-phi)*p[z1,]^Y[z1,]*(1-p[z1,])^(1-Y[z1,])+phi*Y[z1,]))
 		if(exp(mh.star-mh.0) > runif(1)){
