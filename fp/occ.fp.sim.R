@@ -263,7 +263,8 @@ for(i in 1:n.sim){
 	
 	# Threshold values of y_i to determine unoccupied individuals
 	# Threshold values of y_i to create presence/absence data and model with logistic regression
-	# Others...
+	# Use logistic regression on a single, randomly selected replicate to demonstrate the importance of multiple samples
+	
 
 	###
 	### Summarize results
