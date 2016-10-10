@@ -32,7 +32,13 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		tmp
 	}
 
+	# y.lik <- function(y,p,phi,log=FALSE){  # alternative parameterization
+		# tmp <- (1-p)*phi^y*(1-phi)^(1-y)+p*y
+		# if(log) tmp <- log(tmp)
+		# tmp
+	# }
 	
+		
 	###
 	###  Create variables 
 	###
