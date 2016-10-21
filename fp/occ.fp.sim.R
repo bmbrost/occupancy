@@ -23,6 +23,10 @@ psi <- expit(X%*%beta)  # occupancy probability
 hist(psi)
 
 # Heterogeneity in detection
+
+# Revise code below such that format of W is as follows
+# W <- array(1,dim=c(J,2,n))
+
 W <- array(1,dim=c(n,2,J))  # design matrix for detection
 qW <- dim(W)[2]
 for(i in 1:J){
