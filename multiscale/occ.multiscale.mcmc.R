@@ -198,7 +198,6 @@ browser()
 # browser()
 		j.idx <- c(sapply(1:n,function(x) rep(x,J[x])))
 
-# This is not right because z has non-zero probability of equally 1 when all the y's are 0
 		z.tmp <- tapply(a,j.idx,sum)	
 		z <- ifelse(z.tmp>0,1,0)
 		z.long <- c(sapply(1:n,function(x) rep(z[x],J[x])))
