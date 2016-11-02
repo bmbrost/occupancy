@@ -2,6 +2,7 @@ setwd("~/Documents/git/Occupancy/")
 rm(list=ls())
 
 library(lattice)
+library(foreach)
 
 expit <- function(y){
 	exp(y)/(1+exp(y)) 
@@ -12,71 +13,47 @@ expit <- function(y){
 ### Simulate multi-scale occupancy data
 ###
 
-n <- 3  # number of individuals
-J <- 5  # number of subsamples per individual
-K <- 8 # number of replicates per subsample
+N <- 30  # number of sample units
+J <- 5  # number of subunits per sample unit
+K <- 5 # number of replicates per subunit
 
-# group.idx <- data.frame(individual=rep(1:n,each=J*K),subsample=rep(rep(1:J,each=K),n),
-	# replicate=rep(1:8,J*n))
+# Grouping of observations within subunits within units
+groups <- data.frame(unit=rep(1:N,each=J*K),subunit=rep(rep(1:J,each=K),N),replicate=rep(1:K,J*N))
+# groups$replicate <- ave(groups[,1],groups[,1],groups[,2],FUN=seq_along)
 
-group.idx <- cbind(individual=rep(1:n,each=J*K),subsample=rep(rep(1:J,each=K),n))
-# gropu.idx$replicate <- ave(group.idx[,1],group.idx[,1],group.idx[,2],FUN=seq_along)
+# Create idx variable to map latent 'occupancy' state to 'use' state
+z.map <- tapply(groups$subunit,groups$unit,max)
+z.map <- foreach(x=1:N,.combine=c) %do% rep(x,z.map[x])
 
-# Heterogeneity in occupancy (individual-level)
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy
+# Create idx variable to map latent 'use' state to observations
+a.map <- c(t(tapply(groups$replicate,list(groups$unit,groups$subunit),max)))
+a.map <- foreach(x=1:(N*J),.combine=c) %do% rep(x,a.map[x])
+
+# Heterogeneity in occupancy (unit level)
+X <- matrix(cbind(1,rnorm(N)),N,2)  # design matrix for occupancy
 qX <- ncol(X)
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy
+beta <- matrix(c(0.5,1.5),2,1)  # coefficients for occupancy
 psi <- expit(X%*%beta)  # occupancy probability
 hist(psi)
 
-# Heterogeneity in use (subsample-level)
-# U <- array(1,dim=c(J,2,n))  # by subsample then individual
-# qU <- ncol(U)
-# U[,2,] <- rnorm(n*J)
-# gamma <- matrix(c(0.5,1),2,1)  # coefficients for use
-# theta <- apply(U,3,function(x) expit(x%*%gamma))
-
-U <- matrix(1,J*n,2)  # by subsample then individual
+# Heterogeneity in use (subunit level)
+U <- cbind(1,rnorm(N*J))  # ordered by unit then subunit
 qU <- ncol(U)
-U[,2] <- rnorm(n*J)
-gamma <- matrix(c(0.5,1),2,1)  # coefficients for use
+gamma <- matrix(c(-0.5,1),2,1)  # coefficients for use
 theta <- expit(U%*%gamma)
-summary(theta)
-U
-
+hist(theta)
 
 # Heterogeneity in detection
-# W <- array(1,dim=c(K,2,J,n))  # design matrix for detection
-# qW <- ncol(W)
-# W[,2,,] <- rnorm(n*J*K)
-# alpha <- matrix(c(1,1),2,1)  # coefficients for detection
-# p <- apply(W,c(3,4),function(x) expit(x%*%alpha))  # detection probability
-
-W <- matrix(1,K*J*n,2)  # by replicate then subsample then individual)
+W <- cbind(1,rnorm(K*J*N))  # ordered by unit then subunit then replicate
 qW <- ncol(W)
-W[,2] <- rnorm(n*J*K)
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection
+alpha <- matrix(c(0.0,1),2,1)  # coefficients for detection
 p <- expit(W%*%alpha)  # detection probability
-summary(p)
+hist(p)
 
-# State process, use, and observations
-z <- rbinom(n,1,psi)  # simulated occupancy state
-z.long <- rep(z,each=J)  # replicate to match ordering in theta
-a <- rbinom(n*J,1,z.long*theta)
-a.long <- rep(a,each=K)  # replicate to match ordering in p
-# z[match(group.idx$individual,c(1:n))]  
-# A <- apply(theta,1,function(x) rbinom(n,1,z*x))
-
-y <- rbinom(n*J*K,1,a.long*p)
-
-# Y <- array(0,dim=c(K,J,n))
-# for(i in 1:n){
-	# p.tmp <- p[,,i]
-	# A.tmp <- A[i,]
-	# p.tmp <- apply(p.tmp,1,function(x) x*A.tmp)
-	# Y[,,i] <- apply(p.tmp,1,function(x) rbinom(K,1,x))
-# }
-# Y
+# Simulate state process, use, and observations
+z <- rbinom(N,1,psi)  # latent occupancy state
+a <- rbinom(N*J,1,z[z.map]*theta)  # use state
+y <- rbinom(N*J*K,1,a[a.map]*p)  # observations
 
 # Add false positives to dataset
 # phi <- 0.09  # probability of false positive
@@ -93,18 +70,18 @@ source("multiscale/occ.multiscale.mcmc.R")
 start <- list(z=z,a=a,beta=beta,gamma=gamma,alpha=alpha)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.gamma=rep(0,qU),  # prior distribution parameters
 	mu.alpha=rep(0,qW),sigma.beta=3,sigma.gamma=3,sigma.alpha=3)  
-tune <- list(beta=0.35,gamma=0.25,alpha=0.1)
-out1 <- occ.multiscale.mcmc(y,group.idx,W,U,X,priors,start,tune,100,adapt=TRUE)  # fit model
-
-
+tune <- list(beta=0.7,gamma=0.35,alpha=0.2)
+out1 <- occ.multiscale.mcmc(y,groups,W,U,X,priors,start,tune,10000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out1$gamma,type="l");abline(h=gamma,col=1:2,lty=2)  # posterior for gamma
 matplot(out1$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
 apply(out1$beta,2,mean)  # posterior means for beta
+apply(out1$gamma,2,mean)  # posterior means for gamma
 apply(out1$alpha,2,mean)  # posterior means for alpha
 boxplot(out1$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
+boxplot(out1$a.mean~a)  # true occupancy versus estimated occupancy
 
 
 ###
