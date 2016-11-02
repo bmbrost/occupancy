@@ -37,57 +37,35 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	###  Create variables 
 	###
 # browser()	
-	N <- max(groups[,1])  # number of sample units
-	J <- tapply(groups[,2],groups[,1],function(x) max(x))  # number of subunits per sample unit
-	J.total <- sum(J)
-	
-	# Create idx variable to map latent 'occupancy' state to 'use' state
-	z.map <- tapply(groups[,2],groups[,1],max)
-	z.map <- foreach(x=1:N,.combine=c) %do% rep(x,z.map[x])
+	N <- nrow(X)  # number of sample units
+	J <- tapply(groups$U[,2],groups$U[,1],function(x) max(x))  # number of subunits per sample unit
+	J.sum <- sum(J)  # total number of subunits in data set	
 
-	# Create idx variable to map latent 'use' state to observations
-	a.map <- c(t(tapply(groups[,3],list(groups[,1],groups[,2]),max)))
-	a.map <- foreach(x=1:sum(J),.combine=c) %do% rep(x,a.map[x])
-
-	
-	# K <- tapply(groups[,2],groups[,1],table)
-	# tapply(groups[,3],list(groups[,1],groups[,2]),max)
-	# K.long <- unlist(K)
-	# # K <- tapply(group.idx[,2],list(group.idx[,1],group.idx[,2]),length,simplify=FALSE)
-
-# n <- dim(Y)[3]
-# J <- apply(Y,3,ncol)
-# K <- apply(Y,c(3,2), function(x) sum(!is.na(x)))
-
+	y.inv <- ifelse(y==1,0,1)		
 	qX <- ncol(X)
 	qU <- ncol(U)
 	qW <- ncol(W)
-
-# U.mat <- apply(U,2,I)
-# W.mat <- apply(U,2,I)
-
-# y <- apply(Y,c(3,2),sum,na.rm=TRUE)
-# y0 <- which(y==0)
-# n.y0 <- length(y0)
-
-
-	y.inv <- ifelse(y==1,0,1)		
+	
+	# Create indicator variable that maps latent 'occupancy' state (z) to 'use' state (a)
+	z.map <- match(groups$U$unit,groups$X$unit)
+	
+	# Create indicator variable that maps latent 'use' state (a) to observations (y)
+	a.map <- match(paste(groups$W$unit,groups$W$subunit),paste(groups$U$unit,groups$U$subunit))
 
 
 	###
 	###  Starting values 
 	###
-# browser()	
+
+	z <- start$z  # latent occupancy state
 	beta <- as.vector(start$beta)  # coefficients for psi (occupancy probability)
 	gamma <- as.vector(start$gamma)  # coefficients for theta (probability of use) 
 	alpha <- as.vector(start$alpha)  # coefficients for p (probability of detection)
-	z <- start$z  # latent occupancy state
-	
 	psi <- expit(X%*%beta)  # occupancy probability
+	theta <- expit(U%*%gamma)  # probability of use
 	p <- expit(W%*%alpha)  # detection probability
-
 # Q <- start$Q	
-	
+
 	
 	###
 	###  Priors
@@ -110,11 +88,10 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	alpha.save <- matrix(0,n.mcmc,qW)
 	z.mean <- numeric(N)
 	a.mean <- z.map*0
-
 # Q.mean <- matrix(0,n,ncol(Y))
 
-	keep <- list(beta=0,gamma=0,alpha=0)
-	keep.tmp <- keep
+	keep <- list(beta=0,gamma=0,alpha=0)  # number of MH proposals accepted
+	keep.tmp <- keep  # for adaptive tuning
 	Tb <- 50  # frequency of adaptive tuning
 	
 		
@@ -145,10 +122,10 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 		z.tmp <- z[z.map]
 		p1 <- z.tmp*theta*c(tapply(p^y*(1-p)^(1-y),a.map,prod))
 		p0 <- (1-z.tmp*theta)*c(tapply(y.inv,a.map,prod))
-		# cbind(p0,c(t(tapply(y,list(groups[,1],groups[,2]),sum))))
+		# boxplot(p0~(tapply(y,a.map,sum)>0))
 		theta.tmp <- p1/(p1+p0)
-		# cbind(theta.tmp,c(t(tapply(y,list(groups[,1],groups[,2]),sum))))
-		a <- rbinom(J.total,1,theta.tmp)
+		# boxplot(theta.tmp~(tapply(y,a.map,sum)>0))
+		a <- rbinom(J.sum,1,theta.tmp)
 
 		
 		###
@@ -158,12 +135,11 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 		a.inv <- ifelse(a==1,0,1)  
 		p1 <- psi*c(tapply(theta^a*(1-theta)^(1-a),z.map,prod))
 		p0 <- (1-psi)*c(tapply(a.inv,z.map,prod))
-		# cbind(p0,tapply(a,z.map,sum))
+		# boxplot(p0~(tapply(a,z.map,sum)>0))
 		psi.tmp <- p1/(p1+p0)	
-		# cbind(psi.tmp,tapply(a,z.map,sum))
+		# boxplot(psi.tmp~(tapply(a,z.map,sum)>0))
 		z <- rbinom(N,1,psi.tmp)
 		
-
 		# p1 <- psi*apply(Y^Q*p^Y*((1-p)^(1-Y))^(1-Q),1,prod)
 		# p0 <- (1-psi)*apply(Y0^(1-Q)*Y^Q,1,prod)
 		# psi.tmp <- p1/(p1+p0)	
@@ -191,17 +167,17 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	  	###
 		###  Sample gamma (theta)
 	  	###
-# browser()
+
 		idx <- which(z[z.map]==1)  # Update depends only on subunits within occupied units
 		gamma.star <- rnorm(qU,gamma,tune$gamma)
-		theta.star <- expit(U[idx,]%*%gamma.star)
-		mh.star <- sum(dbinom(a[idx],1,theta.star,log=TRUE))+
+		theta.star <- expit(U%*%gamma.star)
+		mh.star <- sum(dbinom(a[idx],1,theta.star[idx],log=TRUE))+
 			sum(dnorm(gamma.star,mu.gamma,sigma.gamma,log=TRUE))		
 		mh.0 <- sum(dbinom(a[idx],1,theta[idx],log=TRUE))+
 			sum(dnorm(gamma,mu.gamma,sigma.gamma,log=TRUE))			
 		if(exp(mh.star-mh.0) > runif(1)){
 			gamma <- gamma.star
-			theta[idx] <- theta.star
+			theta <- theta.star
 			keep$gamma <- keep$gamma+1
 			keep.tmp$gamma <- keep.tmp$gamma+1
 		}
@@ -213,18 +189,20 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 # browser()
 		idx <- which(a[a.map]==1)
 	  	alpha.star <- rnorm(qW,alpha,tune$alpha)
-	  	p.star <- expit(W[idx,]%*%alpha.star)
-	  	mh.star <- sum(dbinom(y[idx],1,p.star,log=TRUE))+
+	  	p.star <- expit(W%*%alpha.star)
+	  	mh.star <- sum(dbinom(y[idx],1,p.star[idx],log=TRUE))+
 	 		sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 	 	mh.0 <-	sum(dbinom(y[idx],1,p[idx],log=TRUE))+
 	 		sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
+
 	  	# mh.star <- sum(log((dbinom(Y[z1,],1,p.star[z1,])^(1-Q[z1,]))))+
 	 		# sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 	 	# mh.0 <-	sum(log((dbinom(Y[z1,],1,p[z1,])^(1-Q[z1,]))))+
 	 		# sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
+
 		if(exp(mh.star-mh.0) > runif(1)){
 			alpha <- alpha.star
-			p[idx] <- p.star
+			p <- p.star
 			keep$alpha <- keep$alpha+1
 			keep.tmp$alpha <- keep.tmp$alpha+1
 	  	}
