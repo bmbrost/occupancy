@@ -12,28 +12,28 @@ expit <- function(y){
 ### Simulate multi-scale occupancy data
 ###
 
-N <- 1000  # number of sample units
-J <- 8  # number of subunits per sample unit
-K <- 5 # number of replicates per subunit
+N <- 100  # number of sample units
+J <- 10  # number of subunits per sample unit
+K <- 10 # number of replicates per subunit
 
 # Heterogeneity in occupancy (unit level)
 X <- matrix(cbind(1,rnorm(N)),N,2)  # design matrix for occupancy
 qX <- ncol(X)
-beta <- matrix(c(0.95,1.5),2,1)  # coefficients for occupancy
+beta <- matrix(c(0.5,1.5),2,1)  # coefficients for occupancy
 psi <- expit(X%*%beta)  # occupancy probability
 hist(psi)
 
 # Heterogeneity in use (subunit level)
 U <- cbind(1,rnorm(N*J))  # ordered by unit then subunit
 qU <- ncol(U)
-gamma <- matrix(c(-0.5,1),2,1)  # coefficients for use
+gamma <- matrix(c(-0.0,1),2,1)  # coefficients for use
 theta <- expit(U%*%gamma)
 hist(theta)
 
 # Heterogeneity in detection
 W <- cbind(1,rnorm(K*J*N))  # ordered by unit then subunit then replicate
 qW <- ncol(W)
-alpha <- matrix(c(0.25,1),2,1)  # coefficients for detection
+alpha <- matrix(c(0.5,1),2,1)  # coefficients for detection
 p <- expit(W%*%alpha)  # detection probability
 hist(p)
 
@@ -61,14 +61,14 @@ table(tapply(y,a.map,sum)[a==1])  # number of detections across "used" subunits
 table(tapply(y,a.map,sum)[a==0])  # number of detections across "unused" subunits
 
 # Add false positives to dataset
-# phi <- 0.09  # probability of false positive
-# Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables
-# Y.tilde <- Y+Q  # add false positives to data set
-# Y.tilde[Y.tilde==2] <- 1
+phi <- 0.09  # probability of false positive
+v <- rbinom(length(y),1,phi)  # false positive indicator variables
+y.tilde <- y+v  # add false positives to data set
+y.tilde[y.tilde==2] <- 1
 
 
 ###
-### Fit multiscale occupancy model
+### Fit standard multiscale occupancy model to data without false positives
 ###
 
 source("multiscale/occ.multiscale.mcmc.R")
@@ -90,46 +90,29 @@ boxplot(out1$a.mean~a)  # true occupancy versus estimated occupancy
 
 
 ###
-### Fit false positive occupancy model to dataset with false positives
+### Fit false positive multiscale occupancy model to data with false positives
 ###
 
 # Model with marginal likelihood
-source("fp/occ.fp.marginal.lik.mcmc.R")
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-	sigma.beta=10,sigma.alpha=10)
-tune <- list(beta=0.35,alpha=0.1)
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
+source("fp/occ.multiscale.fp.mcmc.R")
+start <- list(z=z,a=a,beta=beta,gamma=gamma,alpha=alpha,phi=phi)  # starting values
+priors <- list(mu.beta=rep(0,qX),mu.gamma=rep(0,qU),  # prior distribution parameters
+	mu.alpha=rep(0,qW),sigma.beta=2,sigma.gamma=2,sigma.alpha=2)  
+tune <- list(beta=0.7,gamma=0.35,alpha=0.2)
+out2 <- occ.multiscale.fp.mcmc(y.tilde,groups,W,U,X,priors,start,tune,5000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
+matplot(out2$gamma,type="l");abline(h=gamma,col=1:2,lty=2)  # posterior for gamma
 matplot(out2$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
 apply(out2$beta,2,mean)  # posterior means for beta
+apply(out2$gamma,2,mean)  # posterior means for gamma
 apply(out2$alpha,2,mean)  # posterior means for alpha
 boxplot(out2$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out2$N));sum(z)  # posterior of number in 'occupied' state
-hist(out2$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
+boxplot(out2$a.mean~a)  # true occupancy versus estimated occupancy
 
-# Model with latent indicator variables
-source("fp/occ.fp.latent.var.mcmc.R")
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-	sigma.beta=10,sigma.alpha=10)
-tune <- list(beta=0.35,alpha=0.1)
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
 
-# Examine output
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out3$beta,2,mean)  # posterior means for beta
-apply(out3$alpha,2,mean)  # posterior means for alpha
-boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
-hist(out3$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
-boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
 
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
 
 
 ###

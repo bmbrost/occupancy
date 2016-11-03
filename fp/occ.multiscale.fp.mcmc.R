@@ -1,13 +1,4 @@
-#
-#  Mevin Hooten (20111031), Last Updated: 20131029
-#
-#  W: covariates for detection probability (p)
-#  X: covariates for occupancy probability (psi)
-#
-#
-
-
-occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	###
 	###  Libraries and subroutines
@@ -27,11 +18,12 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
 	}
 
-# y.lik <- function(y,p,phi,log=FALSE){
-	# tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y
-	# if(log) tmp <- log(tmp)
-	# tmp
-# }
+	y.lik <- function(y,p,phi,log=FALSE){
+		tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y
+		if(log) tmp <- log(tmp)
+		tmp
+	}
+
 
 	###
 	###  Create variables 
@@ -64,7 +56,7 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	psi <- expit(X%*%beta)  # occupancy probability
 	theta <- expit(U%*%gamma)  # probability of use
 	p <- expit(W%*%alpha)  # detection probability
-# Q <- start$Q	
+# v <- start$v	
 
 	
 	###
@@ -88,7 +80,7 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	alpha.save <- matrix(0,n.mcmc,qW)
 	z.mean <- numeric(N)
 	a.mean <- z.map*0
-# Q.mean <- matrix(0,n,ncol(Y))
+# v.mean <- matrix(0,n,ncol(Y))
 
 	keep <- list(beta=0,gamma=0,alpha=0)  # number of MH proposals accepted
 	keep.tmp <- keep  # for adaptive tuning
@@ -120,8 +112,8 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	  	###
 # browser()
 		z.tmp <- z[z.map]
-		p1 <- z.tmp*theta*c(tapply(p^y*(1-p)^(1-y),a.map,prod))
-		p0 <- (1-z.tmp*theta)*c(tapply(y.inv,a.map,prod))
+		p1 <- z.tmp*theta*c(tapply(y.lik(y,p,phi),a.map,prod))
+		p0 <- (1-z.tmp*theta)*c(tapply(phi^y*(1-phi)^(1-y),a.map,prod))
 		# boxplot(p0~(tapply(y,a.map,sum)>0))
 		theta.tmp <- p1/(p1+p0)
 		# boxplot(theta.tmp~(tapply(y,a.map,sum)>0))
@@ -140,11 +132,6 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 		# boxplot(psi.tmp~(tapply(a,z.map,sum)>0))
 		z <- rbinom(N,1,psi.tmp)
 		
-		# p1 <- psi*apply(Y^Q*p^Y*((1-p)^(1-Y))^(1-Q),1,prod)
-		# p0 <- (1-psi)*apply(Y0^(1-Q)*Y^Q,1,prod)
-		# psi.tmp <- p1/(p1+p0)	
-		# z <- rbinom(n,1,psi.tmp)
-
 
 	  	###
 		###  Sample beta (psi)
@@ -190,16 +177,14 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 		idx <- which(a[a.map]==1)
 	  	alpha.star <- rnorm(qW,alpha,tune$alpha)
 	  	p.star <- expit(W%*%alpha.star)
-	  	mh.star <- sum(dbinom(y[idx],1,p.star[idx],log=TRUE))+
+	  	mh.star <- sum(y.lik(y[idx],p.star[idx],phi,log=TRUE))+
 	 		sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-	 	mh.0 <-	sum(dbinom(y[idx],1,p[idx],log=TRUE))+
+	 	mh.0 <-	sum(y.lik(y[idx],p[idx],phi,log=TRUE))+
 	 		sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
-
-	  	# mh.star <- sum(log((dbinom(Y[z1,],1,p.star[z1,])^(1-Q[z1,]))))+
+	  	# mh.star <- sum(dbinom(y[idx],1,p.star[idx],log=TRUE))+
 	 		# sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-	 	# mh.0 <-	sum(log((dbinom(Y[z1,],1,p[z1,])^(1-Q[z1,]))))+
+	 	# mh.0 <-	sum(dbinom(y[idx],1,p[idx],log=TRUE))+
 	 		# sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
-
 		if(exp(mh.star-mh.0) > runif(1)){
 			alpha <- alpha.star
 			p <- p.star
@@ -217,8 +202,6 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	  	alpha.save[k,] <- alpha
 	  	a.mean <- a.mean+a
 	  	z.mean <- z.mean+z
-	  	# Q.mean <- Q.mean+Q
-	
 	}
 	cat("\n")
 	
@@ -228,12 +211,11 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 
 	z.mean <- z.mean/n.mcmc
   	a.mean <- a.mean/n.mcmc
-	# Q.mean <- Q.mean/n.mcmc
 	
 	keep <- lapply(keep,function(x) x/n.mcmc)
-	end <- list(beta=beta,gamma=gamma,alpha=alpha,z=z,a=a)  # Q=Q,phi=phi ending values
+	end <- list(beta=beta,gamma=gamma,alpha=alpha,z=z,a=a)  # ending values
 	
 	list(beta=beta.save,gamma=gamma.save,alpha.save=alpha.save,
-		a.mean=a.mean,z.mean=z.mean,#Q.mean=Q.mean,
+		a.mean=a.mean,z.mean=z.mean,
 		keep=keep,end=end,y=y,X=X,U=U,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
