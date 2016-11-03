@@ -1,13 +1,5 @@
 occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
-#
-#  Mevin Hooten (20111031), Last Updated: 20131029
-#
-#  W: covariates for detection probability (p)
-#  X: covariates for occupancy probability (psi)
-#
-#
-
 	###
 	###  Libraries and subroutines
 	###
