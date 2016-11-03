@@ -1,0 +1,469 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\usepackage{pdflscape}
+\usepackage{color}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+\titleformat{\part}
+  {\normalfont\Large\centering}
+  {\thepart}
+  {2em}
+  {}
+  [{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
+
+\titleformat{\section}
+  {\normalfont\scshape}
+  {\thesection}
+  {1em}
+  {}
+
+\titleformat{\subsection}
+  {\normalfont\slshape}
+  {\thesubsection}
+  {1em}
+  {}
+
+%\titlespacing*{\subsection}
+%{0pt}{1cm}{0pt}
+  
+% Make TOC hyperlinks
+\hypersetup{
+  colorlinks=true, %set true if you want colored links
+  linktoc=all,     %set to all if you want both sections and subsections linked
+  linkcolor=blue,  %choose some color if you want links to stand out
+  bookmarksopen=true
+}
+
+%\usepackage[nodayofweek]{datetime}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Part*
+
+\series medium
+\color black
+Multiscale occupancy model that accommodates false detections
+\end_layout
+
+\begin_layout Standard
+\noindent
+\align center
+
+\color black
+\begin_inset VSpace -0.5in
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\align center
+
+\color black
+Brian M.
+ Brost / 02 November 2016 / Vetted: 
+\color red
+NO
+\end_layout
+
+\begin_layout Section
+Description
+\end_layout
+
+\begin_layout Standard
+A 3-level multiscale occupancy model that accommodates false detections.
+ A secondary 
+\begin_inset Quotes eld
+\end_inset
+
+negative control
+\begin_inset Quotes erd
+\end_inset
+
+ data set is used for estimating the probability of a false detection.
+\end_layout
+
+\begin_layout Section
+Implementation
+\end_layout
+
+\begin_layout Standard
+The file occ.multiscale.fp.sim.R simulates data according to the model statement
+ presented below, and occ.multiscale.fp.mcmc.R contains the MCMC algorithm for
+ parameter estimation.
+\end_layout
+
+\begin_layout Section
+Model Statement
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $y_{ijk}$
+\end_inset
+
+ be a binary observation representing a detection/non-detection, where 
+\begin_inset Formula $i=1,\ldots,N$
+\end_inset
+
+ indexes primary sample unit (e.g., individual or site), 
+\begin_inset Formula $j=1,\ldots,J_{i}$
+\end_inset
+
+ indexes subunits (i.e., a secondary unit nested within the primary sample
+ unit), and 
+\begin_inset Formula $k=1,\ldots K_{ij}$
+\end_inset
+
+ indexes replicate observations within a subunit.
+ Also let 
+\begin_inset Formula $v$
+\end_inset
+
+ be the number of detections out of 
+\begin_inset Formula $n$
+\end_inset
+
+ 
+\begin_inset Quotes eld
+\end_inset
+
+trials
+\begin_inset Quotes erd
+\end_inset
+
+ obtained in the 
+\begin_inset Quotes eld
+\end_inset
+
+negative control
+\begin_inset Quotes erd
+\end_inset
+
+ dataset.
+ 
+\begin_inset Formula 
+\begin{eqnarray*}
+y_{ijk} & \sim & \begin{cases}
+\left(1-\phi\right)\text{Bern}\left(p_{ijk}\right)+\phi1_{\left\{ y_{ijk}=1\right\} }, & a_{ij}=1\\
+\text{Bern}\left(\phi\right), & a_{ij}=0
+\end{cases}\\
+a_{ij} & \sim & \begin{cases}
+\text{Bern}\left(\theta_{ij}\right), & z_{i}=1\\
+0, & z_{i}=0
+\end{cases}\\
+z_{i} & \sim & \text{Bern}\left(\psi_{i}\right)\\
+\psi_{i} & = & \text{logit}^{-1}\left(\mathbf{x}_{i}^{\prime}\boldsymbol{\beta}\right)\\
+\theta_{ij} & = & \text{logit}^{-1}\left(\mathbf{u}_{ij}^{\prime}\boldsymbol{\gamma}\right)\\
+p_{ijk} & = & \text{logit}^{-1}\left(\mathbf{w}_{ijk}^{\prime}\boldsymbol{\alpha}\right)\\
+\boldsymbol{\beta} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+\boldsymbol{\gamma} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\mathbf{I}\right)\\
+\boldsymbol{\alpha} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right)\\
+v & \sim & \text{Binom}\left(M,\phi\right)\\
+\phi & \sim & \text{Beta}\left(a,b\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Full-conditional Distributions
+\end_layout
+
+\begin_layout Subsection
+Occupancy state (
+\begin_inset Formula $z_{i}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[z_{i}\mid\cdot\right] & \propto & \prod_{j=1}^{J_{i}}\left[a_{ij}\mid\theta_{ij},z_{i}\right]\left[z_{i}\right]\\
+ & \propto & \prod_{j=1}^{J_{i}}\left(\theta_{ij}^{a_{ij}}\left(1-\theta_{ij}\right)^{1-a_{ij}}\right)^{z_{i}}\left(1_{\left\{ a_{ij}=0\right\} }^{1-z_{i}}\right)\psi_{i}^{z_{i}}\left(1-\psi_{i}\right)^{1-z_{i}}\\
+ & \propto & \prod_{j=1}^{J_{i}}\left(\psi_{i}\theta_{ij}^{a_{ij}}\left(1-\theta_{ij}\right)^{1-a_{ij}}\right)^{z_{i}}\left(\left(1-\psi_{i}\right)1_{\left\{ a_{ij}=0\right\} }\right)^{1-z_{i}}\\
+ & = & \text{Bern}\left(\tilde{\psi}_{i}\right),
+\end{eqnarray*}
+
+\end_inset
+
+where,
+\begin_inset Formula 
+\[
+\tilde{\psi}_{i}=\frac{\psi_{i}\prod_{j=1}^{J_{i}}\theta_{ij}^{a_{ij}}\left(1-\theta_{ij}\right)^{1-a_{ij}}}{\psi_{i}\prod_{j=1}^{J_{i}}\theta_{ij}^{a_{ij}}\left(1-\theta_{ij}\right)^{1-a_{ij}}+\left(1-\psi_{i}\right)\prod_{j=1}^{J_{i}}1_{\left\{ a_{ij}=0\right\} }}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+\begin_inset Quotes eld
+\end_inset
+
+Use
+\begin_inset Quotes erd
+\end_inset
+
+ state (
+\begin_inset Formula $a_{ij}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+Note that the mixture specification for 
+\begin_inset Formula $a_{ij}$
+\end_inset
+
+ in the model statement above is equivalent to 
+\begin_inset Formula $a_{ij}\sim\text{Bern}\left(z_{i}\theta_{ij}\right)$
+\end_inset
+
+.
+ The update for 
+\begin_inset Formula $a_{ij}$
+\end_inset
+
+ relies on this alternative specification.
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[a_{ij}\mid\cdot\right] & \propto & \prod_{k=1}^{K_{ij}}\left[y_{ijk}\mid p_{ijk},a_{ij},\phi\right]\left[a_{ij}\right]\\
+ & \propto & \prod_{k=1}^{K_{ij}}\left(\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right)^{a_{ij}}\left(\phi^{y_{ijk}}\left(1-\phi\right)^{1-y_{ijk}}\right)\left(z_{i}\theta_{ij}\right)^{a_{ij}}\left(1-z_{i}\theta_{ij}\right)^{1-a_{ij}}\\
+ & \propto & \prod_{k=1}^{K_{ij}}\left[\left(z_{i}\theta_{ij}\right)\left(\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right)\right]^{a_{ij}}\left(\left(1-z_{i}\theta_{ij}\right)\phi^{y_{ijk}}\left(1-\phi\right)^{1-y_{ijk}}\right)^{1-a_{ij}}\\
+ & = & \text{Bern}\left(\tilde{\theta}_{ij}\right),
+\end{eqnarray*}
+
+\end_inset
+
+where,
+\begin_inset Formula 
+\[
+\tilde{\theta}_{ij}=\frac{z_{i}\theta_{ij}\prod_{k=1}^{K_{ij}}\left[\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right]}{z_{i}\theta_{ij}\prod_{k=1}^{K_{ij}}\left[\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right]+\left(1-z_{i}\theta_{ij}\right)\prod_{k=1}^{K_{ij}}\phi^{y_{ijk}}\left(1-\phi\right)^{1-y_{ijk}}}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Regression coefficients affecting occupancy probability (
+\begin_inset Formula $\boldsymbol{\beta}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\beta}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\left[z_{i}\mid\psi_{i}\right]\left[\boldsymbol{\beta}\right]\\
+ & \propto & \prod_{i=1}^{N}\text{Bern}\left(z_{i}\mid\psi_{i}\right){\cal N}\left(\mathbf{\boldsymbol{\beta}}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right).
+\end{eqnarray*}
+
+\end_inset
+
+The update for 
+\begin_inset Formula $\boldsymbol{\beta}$
+\end_inset
+
+ proceeds using Metropolis-Hastings.
+\end_layout
+
+\begin_layout Subsection
+Regression coefficients affecting probability of use (
+\begin_inset Formula $\boldsymbol{\gamma}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\gamma}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\left[a_{ij}\mid\theta_{ij},z_{i}\right]\left[\boldsymbol{\gamma}\right]\\
+ & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\text{Bern}\left(a_{ij}\mid\theta_{ij}\right)^{z_{i}}{\cal N}\left(\mathbf{\boldsymbol{\gamma}}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\mathbf{I}\right).
+\end{eqnarray*}
+
+\end_inset
+
+The update for 
+\begin_inset Formula $\boldsymbol{\gamma}$
+\end_inset
+
+ proceeds using Metropolis-Hastings.
+ Note that, in effect, the product over 
+\begin_inset Formula $i$
+\end_inset
+
+ only includes instances of 
+\begin_inset Formula $i$
+\end_inset
+
+ such that 
+\begin_inset Formula $z_{i}=1$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Regression coefficients affecting detection probability (
+\begin_inset Formula $\boldsymbol{\alpha}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\alpha}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\prod_{k=1}^{K_{ij}}\left[y_{ijk}\mid p_{ijk},a_{ij}\right]\left[\boldsymbol{\alpha}\right]\\
+ & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\prod_{k=1}^{K_{ij}}\left[\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right]^{a_{ij}}{\cal N}\left(\mathbf{\boldsymbol{\alpha}}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right).
+\end{eqnarray*}
+
+\end_inset
+
+The update for 
+\begin_inset Formula $\boldsymbol{\alpha}$
+\end_inset
+
+ proceeds using Metropolis-Hastings.
+ Note that, in effect, the product over 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+ only includes instances of 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+ such that 
+\begin_inset Formula $a_{ij}=1$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Probability of a false detection (
+\begin_inset Formula $\phi$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\phi\mid\cdot\right] & \propto & \left[v\mid M,\phi\right]\left[\phi\right]\\
+ & \propto & \text{Binom}\left(v\mid M,\phi\right)\text{Beta}\left(a,b\right)\\
+ & \propto & \phi^{v}\left(1-\phi\right)^{M-v}\phi^{a-1}(1-\phi)^{b-1}\\
+ & \propto & \phi^{v+a-1}\left(1-\phi\right)^{M-v+b-1}\\
+ & = & \text{Beta}\left(v+a,M-v+b\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
