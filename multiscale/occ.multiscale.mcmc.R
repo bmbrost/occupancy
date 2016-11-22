@@ -25,7 +25,7 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	###
 # browser()	
 	N <- nrow(X)  # number of sample units
-	J <- tapply(groups$U[,2],groups$U[,1],function(x) max(x))  # number of subunits per sample unit
+	J <- tapply(groups$U[,2],groups$U[,1],function(x) length(x))  # number of subunits per sample unit
 	J.sum <- sum(J)  # total number of subunits in data set	
 
 	y.inv <- ifelse(y==1,0,1)		
@@ -44,7 +44,7 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	###  Starting values 
 	###
 
-	z <- start$z  # latent occupancy state
+	z <- c(start$z)  # latent occupancy state
 	beta <- as.vector(start$beta)  # coefficients for psi (occupancy probability)
 	gamma <- as.vector(start$gamma)  # coefficients for theta (probability of use) 
 	alpha <- as.vector(start$alpha)  # coefficients for p (probability of detection)
@@ -58,7 +58,7 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
 	###
 	
 	mu.beta <- matrix(priors$mu.beta,qX,1)  # prior mean for beta (coefficients for psi)
-	mu.gamma <- matrix(priors$mu.gamma,qX,1)  # prior mean for gamma (coefficients for theta)	
+	mu.gamma <- matrix(priors$mu.gamma,qU,1)  # prior mean for gamma (coefficients for theta)	
 	mu.alpha <- matrix(priors$mu.alpha,qW,1)  # prior mean for alpha (coefficients for p)
 	sigma.beta <- priors$sigma.beta  # prior standard deviation for beta (coefficients for psi)
 	sigma.gamma <- priors$sigma.gamma  # prior standard deviation for gamma (coefficients for theta)
