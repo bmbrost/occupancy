@@ -6,27 +6,32 @@
 \begin_preamble
 \usepackage{pdflscape}
 \usepackage{color}
-\usepackage{titlesec}
 \usepackage{hyperref}
 
-\titleformat{\part}
-  {\normalfont\Large\centering}
-  {\thepart}
-  {2em}
-  {}
-  [{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
+\usepackage{sectsty}
+\partfont{\centering\normalfont\Large}
+\sectionfont{\normalfont\normalsize\scshape}
+\subsectionfont{\normalfont\normalsize\slshape}
 
-\titleformat{\section}
-  {\normalfont\scshape}
-  {\thesection}
-  {1em}
-  {}
+%\usepackage{titlesec}
+%\titleformat{\part}
+  %{\normalfont\Large\centering}
+  %{\thepart}
+  %{2em}
+  %{}
+  %[{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
 
-\titleformat{\subsection}
-  {\normalfont\slshape}
-  {\thesubsection}
-  {1em}
-  {}
+%\titleformat{\section}
+  %{\normalfont\scshape}
+  %{\thesection}
+  %{1em}
+  %{}
+
+%\titleformat{\subsection}
+  %{\normalfont\slshape}
+  %{\thesubsection}
+  %{1em}
+  %{}
 
 %\titlespacing*{\subsection}
 %{0pt}{1cm}{0pt}
@@ -116,14 +121,19 @@
 \series medium
 \color black
 Multiscale occupancy model that accommodates false detections
+\begin_inset VSpace -0.175in
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-\noindent
-\align center
+\begin_inset CommandInset line
+LatexCommand rule
+offset "0ex"
+width "100col%"
+height "0.5pt"
 
-\color black
-\begin_inset VSpace -0.5in
 \end_inset
 
 
@@ -135,7 +145,7 @@ Multiscale occupancy model that accommodates false detections
 
 \color black
 Brian M.
- Brost / 02 November 2016 / Vetted: 
+ Brost / 22 December 2016 / Vetted: 
 \color red
 NO
 \end_layout
@@ -154,7 +164,7 @@ negative control
 \begin_inset Quotes erd
 \end_inset
 
- data set is necessary for estimating the probability of a false detection.
+ data set is used for estimating the probability of a false detection.
 \end_layout
 
 \begin_layout Section
@@ -163,8 +173,8 @@ Implementation
 
 \begin_layout Standard
 The file occ.multiscale.fp.sim.R simulates data according to the model statement
- presented below, and occ.multiscale.fp.mcmc.R contains the MCMC algorithm for
- parameter estimation.
+ below, and occ.multiscale.fp.mcmc.R contains the MCMC algorithm for parameter
+ estimation.
 \end_layout
 
 \begin_layout Section
@@ -184,8 +194,7 @@ Let
 \begin_inset Formula $j=1,\ldots,J_{i}$
 \end_inset
 
- indexes subunits (i.e., a secondary unit nested within the primary sample
- unit), and 
+ indexes subunits nested within the primary sample unit, and 
 \begin_inset Formula $k=1,\ldots K_{ij}$
 \end_inset
 
@@ -195,18 +204,10 @@ Let
 \end_inset
 
  be the number of detections out of 
-\begin_inset Formula $n$
+\begin_inset Formula $M$
 \end_inset
 
- 
-\begin_inset Quotes eld
-\end_inset
-
-trials
-\begin_inset Quotes erd
-\end_inset
-
- obtained in a secondary 
+ trials obtained in the 
 \begin_inset Quotes eld
 \end_inset
 
@@ -301,12 +302,11 @@ Note that the mixture specification for
 \begin_inset Formula $a_{ij}\sim\text{Bern}\left(z_{i}\theta_{ij}\right)$
 \end_inset
 
-.
- The update for 
+, an alternate specification that simplifies the update for 
 \begin_inset Formula $a_{ij}$
 \end_inset
 
- relies on this alternative specification.
+.
 \end_layout
 
 \begin_layout Standard

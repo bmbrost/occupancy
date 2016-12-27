@@ -6,27 +6,32 @@
 \begin_preamble
 \usepackage{pdflscape}
 \usepackage{color}
-\usepackage{titlesec}
 \usepackage{hyperref}
 
-\titleformat{\part}
-  {\normalfont\Large\centering}
-  {\thepart}
-  {2em}
-  {}
-  [{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
+\usepackage{sectsty}
+\partfont{\centering\normalfont\Large}
+\sectionfont{\normalfont\normalsize\scshape}
+\subsectionfont{\normalfont\normalsize\slshape}
 
-\titleformat{\section}
-  {\normalfont\scshape}
-  {\thesection}
-  {1em}
-  {}
+%\usepackage{titlesec}
+%\titleformat{\part}
+  %{\normalfont\Large\centering}
+  %{\thepart}
+  %{2em}
+  %{}
+  %[{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
 
-\titleformat{\subsection}
-  {\normalfont\slshape}
-  {\thesubsection}
-  {1em}
-  {}
+%\titleformat{\section}
+  %{\normalfont\scshape}
+  %{\thesection}
+  %{1em}
+  %{}
+
+%\titleformat{\subsection}
+  %{\normalfont\slshape}
+  %{\thesubsection}
+  %{1em}
+  %{}
 
 %\titlespacing*{\subsection}
 %{0pt}{1cm}{0pt}
@@ -116,14 +121,19 @@
 \series medium
 \color black
 Multiscale occupancy model that accommodates false detections
+\begin_inset VSpace -0.175in
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-\noindent
-\align center
+\begin_inset CommandInset line
+LatexCommand rule
+offset "0ex"
+width "100col%"
+height "0.5pt"
 
-\color black
-\begin_inset VSpace -0.5in
 \end_inset
 
 
@@ -135,7 +145,7 @@ Multiscale occupancy model that accommodates false detections
 
 \color black
 Brian M.
- Brost / 02 November 2016 / Vetted: 
+ Brost / 22 December 2016 / Vetted: 
 \color red
 NO
 \end_layout
@@ -163,8 +173,8 @@ Implementation
 
 \begin_layout Standard
 The file occ.multiscale.fp.sim.R simulates data according to the model statement
- presented below, and occ.multiscale.fp.mcmc.R contains the MCMC algorithm for
- parameter estimation.
+ below, and occ.multiscale.fp.mcmc.R contains the MCMC algorithm for parameter
+ estimation.
 \end_layout
 
 \begin_layout Section
@@ -184,8 +194,7 @@ Let
 \begin_inset Formula $j=1,\ldots,J_{i}$
 \end_inset
 
- indexes subunits (i.e., a secondary unit nested within the primary sample
- unit), and 
+ indexes subunits nested within the primary sample unit, and 
 \begin_inset Formula $k=1,\ldots K_{ij}$
 \end_inset
 
@@ -195,18 +204,10 @@ Let
 \end_inset
 
  be the number of detections out of 
-\begin_inset Formula $n$
+\begin_inset Formula $M$
 \end_inset
 
- 
-\begin_inset Quotes eld
-\end_inset
-
-trials
-\begin_inset Quotes erd
-\end_inset
-
- obtained in the 
+ trials obtained in the 
 \begin_inset Quotes eld
 \end_inset
 
@@ -301,12 +302,11 @@ Note that the mixture specification for
 \begin_inset Formula $a_{ij}\sim\text{Bern}\left(z_{i}\theta_{ij}\right)$
 \end_inset
 
-.
- The update for 
+, an alternate specification that simplifies the update for 
 \begin_inset Formula $a_{ij}$
 \end_inset
 
- relies on this alternative specification.
+.
 \end_layout
 
 \begin_layout Standard
@@ -314,7 +314,7 @@ Note that the mixture specification for
 \begin_inset Formula 
 \begin{eqnarray*}
 \left[a_{ij}\mid\cdot\right] & \propto & \prod_{k=1}^{K_{ij}}\left[y_{ijk}\mid p_{ijk},a_{ij},\phi\right]\left[a_{ij}\right]\\
- & \propto & \prod_{k=1}^{K_{ij}}\left(\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right)^{a_{ij}}\left(\phi^{y_{ijk}}\left(1-\phi\right)^{1-y_{ijk}}\right)\left(z_{i}\theta_{ij}\right)^{a_{ij}}\left(1-z_{i}\theta_{ij}\right)^{1-a_{ij}}\\
+ & \propto & \prod_{k=1}^{K_{ij}}\left(\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right)^{a_{ij}}\left(\phi^{y_{ijk}}\left(1-\phi\right)^{1-y_{ijk}}\right)^{1-a_{ij}}\left(z_{i}\theta_{ij}\right)^{a_{ij}}\left(1-z_{i}\theta_{ij}\right)^{1-a_{ij}}\\
  & \propto & \prod_{k=1}^{K_{ij}}\left[\left(z_{i}\theta_{ij}\right)\left(\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right)\right]^{a_{ij}}\left(\left(1-z_{i}\theta_{ij}\right)\phi^{y_{ijk}}\left(1-\phi\right)^{1-y_{ijk}}\right)^{1-a_{ij}}\\
  & = & \text{Bern}\left(\tilde{\theta}_{ij}\right),
 \end{eqnarray*}
@@ -380,7 +380,7 @@ The update for
 \end_inset
 
  proceeds using Metropolis-Hastings.
- Note that, in effect, the product over 
+ Note that the product over 
 \begin_inset Formula $i$
 \end_inset
 
@@ -407,7 +407,7 @@ Regression coefficients affecting detection probability (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[\boldsymbol{\alpha}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\prod_{k=1}^{K_{ij}}\left[y_{ijk}\mid p_{ijk},a_{ij}\right]\left[\boldsymbol{\alpha}\right]\\
+\left[\boldsymbol{\alpha}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\prod_{k=1}^{K_{ij}}\left[y_{ijk}\mid p_{ijk},a_{ij},\phi\right]\left[\boldsymbol{\alpha}\right]\\
  & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\prod_{k=1}^{K_{ij}}\left[\left(1-\phi\right)p_{ijk}^{y_{ijk}}\left(1-p_{ijk}\right)^{1-y_{ijk}}+\phi1_{\left\{ y_{ijk}=1\right\} }\right]^{a_{ij}}{\cal N}\left(\mathbf{\boldsymbol{\alpha}}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right).
 \end{eqnarray*}
 
@@ -418,7 +418,7 @@ The update for
 \end_inset
 
  proceeds using Metropolis-Hastings.
- Note that, in effect, the product over 
+ Note that the product over 
 \begin_inset Formula $i$
 \end_inset
 
