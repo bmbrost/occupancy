@@ -202,9 +202,8 @@ occ.multiscale.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TR
   	a.mean <- a.mean/n.mcmc
 	
 	keep <- lapply(keep,function(x) x/n.mcmc)
-	end <- list(beta=beta,gamma=gamma,alpha=alpha,z=z,a=a)  # Q=Q,phi=phi ending values
+	end <- list(beta=beta,gamma=gamma,alpha=alpha,z=z,a=a)  # ending values
 	
-	list(beta=beta.save,gamma=gamma.save,alpha.save=alpha.save,
-		a.mean=a.mean,z.mean=z.mean,
+	list(beta=beta.save,gamma=gamma.save,alpha=alpha.save,a.mean=a.mean,z.mean=z.mean,
 		keep=keep,end=end,y=y,X=X,U=U,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }

@@ -12,7 +12,7 @@ expit <- function(y){
 ### Simulate multi-scale occupancy data
 ###
 
-N <- 1000  # number of sample units
+N <- 100  # number of sample units
 J <- 8  # number of subunits per sample unit
 K <- 5 # number of replicates per subunit
 

@@ -13,8 +13,8 @@ expit <- function(y){
 ###
 
 N <- 100  # number of sample units
-J <- 10  # number of subunits per sample unit
-K <- 10 # number of replicates per subunit
+J <- 8  # number of subunits per sample unit
+K <- 5 # number of replicates per subunit
 
 # Heterogeneity in occupancy (unit level)
 X <- matrix(cbind(1,rnorm(N)),N,2)  # design matrix for occupancy
@@ -66,6 +66,9 @@ v <- rbinom(length(y),1,phi)  # false positive indicator variables
 y.tilde <- y+v  # add false positives to data set
 y.tilde[y.tilde==2] <- 1
 
+# Create ancillary negative control data set
+ctrl <- list(v=rbinom(1,50,phi),M=50)
+
 
 ###
 ### Fit standard multiscale occupancy model to data without false positives
@@ -97,9 +100,9 @@ boxplot(out1$a.mean~a)  # true occupancy versus estimated occupancy
 source("fp/occ.multiscale.fp.mcmc.R")
 start <- list(z=z,a=a,beta=beta,gamma=gamma,alpha=alpha,phi=phi)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.gamma=rep(0,qU),  # prior distribution parameters
-	mu.alpha=rep(0,qW),sigma.beta=2,sigma.gamma=2,sigma.alpha=2)  
+	mu.alpha=rep(0,qW),sigma.beta=2,sigma.gamma=2,sigma.alpha=2,a=1,b=1)  
 tune <- list(beta=0.7,gamma=0.35,alpha=0.2)
-out2 <- occ.multiscale.fp.mcmc(y.tilde,groups,W,U,X,priors,start,tune,5000,adapt=TRUE)  # fit model
+out2 <- occ.multiscale.fp.mcmc(y.tilde,ctrl,groups,W,U,X,priors,start,tune,5000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
@@ -110,9 +113,7 @@ apply(out2$gamma,2,mean)  # posterior means for gamma
 apply(out2$alpha,2,mean)  # posterior means for alpha
 boxplot(out2$z.mean~z)  # true occupancy versus estimated occupancy
 boxplot(out2$a.mean~a)  # true occupancy versus estimated occupancy
-
-
-
+hist(out2$phi); abline(v=phi,lty=2); abline(v=ctrl$v/ctrl$M,lty=2,col=2)
 
 
 ###
