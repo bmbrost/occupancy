@@ -1,4 +1,4 @@
-occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.multiscale.fp.mcmc <- function(y,ctrl,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	###
 	###  Libraries and subroutines
@@ -19,7 +19,7 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 	}
 
 	y.lik <- function(y,p,phi,log=FALSE){
-		tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y
+		tmp <- (1-phi)*(p^y)*((1-p)^(1-y))+(phi*y)
 		if(log) tmp <- log(tmp)
 		tmp
 	}
@@ -56,7 +56,6 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 	psi <- expit(X%*%beta)  # occupancy probability
 	theta <- expit(U%*%gamma)  # probability of use
 	p <- expit(W%*%alpha)  # detection probability
-# v <- start$v	
 
 	
 	###
@@ -80,7 +79,7 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 	alpha.save <- matrix(0,n.mcmc,qW)
 	z.mean <- numeric(N)
 	a.mean <- z.map*0
-# v.mean <- matrix(0,n,ncol(Y))
+	phi.save <- numeric(n.mcmc)
 
 	keep <- list(beta=0,gamma=0,alpha=0)  # number of MH proposals accepted
 	keep.tmp <- keep  # for adaptive tuning
@@ -113,7 +112,7 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 # browser()
 		z.tmp <- z[z.map]
 		p1 <- z.tmp*theta*c(tapply(y.lik(y,p,phi),a.map,prod))
-		p0 <- (1-z.tmp*theta)*c(tapply(phi^y*(1-phi)^(1-y),a.map,prod))
+		p0 <- (1-z.tmp*theta)*c(tapply((phi^y)*((1-phi)^(1-y)),a.map,prod))
 		# boxplot(p0~(tapply(y,a.map,sum)>0))
 		theta.tmp <- p1/(p1+p0)
 		# boxplot(theta.tmp~(tapply(y,a.map,sum)>0))
@@ -125,7 +124,7 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 	  	###
 # browser()
 		a.inv <- ifelse(a==1,0,1)  
-		p1 <- psi*c(tapply(theta^a*(1-theta)^(1-a),z.map,prod))
+		p1 <- psi*c(tapply((theta^a)*((1-theta)^(1-a)),z.map,prod))
 		p0 <- (1-psi)*c(tapply(a.inv,z.map,prod))
 		# boxplot(p0~(tapply(a,z.map,sum)>0))
 		psi.tmp <- p1/(p1+p0)	
@@ -181,10 +180,6 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 	 		sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 	 	mh.0 <-	sum(y.lik(y[idx],p[idx],phi,log=TRUE))+
 	 		sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
-	  	# mh.star <- sum(dbinom(y[idx],1,p.star[idx],log=TRUE))+
-	 		# sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-	 	# mh.0 <-	sum(dbinom(y[idx],1,p[idx],log=TRUE))+
-	 		# sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
 		if(exp(mh.star-mh.0) > runif(1)){
 			alpha <- alpha.star
 			p <- p.star
@@ -194,12 +189,20 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
 
 
 		###
+		### Sample phi (probability of a false positive)
+		### 
+# browser()
+		phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
+
+
+		###
 	  	###  Save samples 
 	  	###
 	
 	  	beta.save[k,] <- beta
 	  	gamma.save[k,] <- gamma
 	  	alpha.save[k,] <- alpha
+	  	phi.save[k] <- phi
 	  	a.mean <- a.mean+a
 	  	z.mean <- z.mean+z
 	}
@@ -213,9 +216,8 @@ occ.multiscale.fp.mcmc <- function(y,groups,W,U,X,priors,start,tune,n.mcmc,adapt
   	a.mean <- a.mean/n.mcmc
 	
 	keep <- lapply(keep,function(x) x/n.mcmc)
-	end <- list(beta=beta,gamma=gamma,alpha=alpha,z=z,a=a)  # ending values
+	end <- list(beta=beta,gamma=gamma,alpha=alpha,z=z,a=a,phi=phi)  # ending values
 	
-	list(beta=beta.save,gamma=gamma.save,alpha.save=alpha.save,
-		a.mean=a.mean,z.mean=z.mean,
+	list(beta=beta.save,gamma=gamma.save,alpha=alpha.save,a.mean=a.mean,z.mean=z.mean,phi=phi.save,
 		keep=keep,end=end,y=y,X=X,U=U,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
