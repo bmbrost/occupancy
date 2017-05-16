@@ -1,4 +1,4 @@
-setwd("~/Documents/git/Occupancy/")
+setwd("~/git/Occupancy/")
 rm(list=ls())
 
 expit <- function(y){
@@ -10,13 +10,13 @@ expit <- function(y){
 ### Simulate 'single-season' occupancy data
 ###
 
-n <- 100  # number of individuals
-J <- 8  # number of samples per individual
+n <- 300  # number of sample units
+J <- 3  # number of replicates per sample unit
 
 # Heterogeneity in occupancy
 X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy
 qX <- ncol(X)
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy
+beta <- matrix(c(0,1),2,1)  # coefficients for occupancy
 psi <- expit(X%*%beta)  # occupancy probability
 hist(psi)
 
@@ -26,7 +26,7 @@ qW <- dim(W)[2]
 for(i in 1:J){
 	W[,2,i] <- rnorm(n)
 }
-alpha <- matrix(c(-1.5,0.5),2,1)  # coefficients for detection
+alpha <- matrix(c(1,1),2,1)  # coefficients for detection
 p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
 summary(p)
 
@@ -43,8 +43,8 @@ source("static/occ.mcmc.R")
 start <- list(beta=beta,alpha=alpha,z=z)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 	sigma.beta=10,sigma.alpha=10)
-tune <- list(beta=0.1,alpha=0.1)
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,1000,adapt=TRUE)  # fit model
+tune <- list(beta=0.2,alpha=0.15)
+out1 <- occ.mcmc(Y,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
