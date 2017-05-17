@@ -159,6 +159,6 @@ occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	keep <- lapply(keep,function(x) x/n.mcmc)
 	end <- list(beta=beta,alpha=alpha,z=z)  # starting values
 	
-	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,keep=keep,end=end,
+	list(beta=beta.save,alpha.save=alpha.save,N=N.save,z.mean=z.mean,keep=keep,end=end,
 		Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
