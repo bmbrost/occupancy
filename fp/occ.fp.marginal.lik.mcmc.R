@@ -1,4 +1,4 @@
-occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	###
 	###  Libraries and subroutines
@@ -50,6 +50,7 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	mu.beta <- matrix(priors$mu.beta,qX,1)
 	mu.alpha <- matrix(priors$mu.alpha,qW,1)
+	phi.save <- numeric(n.mcmc)
 	sigma.beta <- priors$sigma.beta
 	sigma.alpha <- priors$sigma.alpha
 
@@ -97,6 +98,13 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 	
 
+		
+		###
+		###  Sample phi
+	  	###
+		
+		phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
+		
 		
 	  	###
 		###  Sample beta (psi)
@@ -156,6 +164,7 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	  	beta.save[k,] <- beta
 	  	alpha.save[k,] <- alpha
+		phi.save[k] <- phi
 	  	z.mean <- z.mean+z/n.mcmc
 	  	N.save[k] <- sum(z)
 	
@@ -167,8 +176,8 @@ occ.fp.marginal.lik.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	###
 
 	keep <- lapply(keep,function(x) x/n.mcmc)
-	end <- list(beta=beta,alpha=alpha,z=z)  # starting values
+	end <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	
-	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,keep=keep,end=end,
-		Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
+	list(beta=beta.save,alpha.save=alpha.save,phi=phi.save,N=N.save,z.mean=z.mean,
+		keep=keep,end=end,Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }

@@ -1,4 +1,4 @@
-occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.fp.latent.var.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 #
 #  Mevin Hooten (20111031), Last Updated: 20131029
@@ -73,6 +73,7 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	beta.save <- matrix(0,n.mcmc,qX)
 	alpha.save <- matrix(0,n.mcmc,qW)
+	phi.save <- numeric(n.mcmc)
 	z.mean <- numeric(n)
 	N.save <- numeric(n.mcmc)
 	Q.mean <- matrix(0,n,ncol(Y))
@@ -101,6 +102,13 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	   	} 	
 
 		
+		###
+		###  Sample phi
+	  	###
+		
+		phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
+
+
 	  	###
 		###  Sample beta (psi)
 	  	###
@@ -168,6 +176,7 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	  	beta.save[k,] <- beta
 	  	alpha.save[k,] <- alpha
+	  	phi.save[k] <- phi
 	  	z.mean <- z.mean+z/n.mcmc
 	  	N.save[k] <- sum(z)
 	  	Q.mean <- Q.mean+Q
@@ -185,6 +194,7 @@ occ.fp.latent.var.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	keep <- lapply(keep,function(x) x/n.mcmc)
 	end <- list(beta=beta,alpha=alpha,z=z,Q=Q,phi=phi)  # starting values
 	
-	list(beta=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,Q.mean=Q.mean,
-		keep=keep,end=end,Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
+	list(beta=beta.save,alpha.save=alpha.save,phi=phi.save,N=N.save,
+		z.mean=z.mean,Q.mean=Q.mean,keep=keep,end=end,Y=Y,X=X,W=W,
+		priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
