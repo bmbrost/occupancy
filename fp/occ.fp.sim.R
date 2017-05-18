@@ -173,8 +173,8 @@ sim.sum <- function(out,mod,i){
 	tmp
 }
 
-n.mcmc <- 10000  # number of MCMC iterations to perform for each model
-n.sim <- 1000
+n.mcmc <- 5000  # number of MCMC iterations to perform for each model
+n.sim <- 50
 for(i in 1:n.sim){
 
 	cat("\n")
@@ -185,8 +185,8 @@ for(i in 1:n.sim){
 	### Simulate 'single-season' occupancy data
 	###
 	
-	n <- 100  # number of individuals
-	J <- 20  # number of samples per individual
+	n <- 300  # number of individuals
+	J <- 3  # number of samples per individual
 	
 	# Heterogeneity in occupancy
 	X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy
@@ -223,16 +223,18 @@ for(i in 1:n.sim){
 	Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables
 	Y.tilde <- Y+Q  # add false positives to data set
 	Y.tilde[Y.tilde==2] <- 1
-
+M <- 36
+ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
+	
 	
 	###
 	### Fit standard occupancy model to dataset without false positives
 	###
 	
-	source("static/occ.mcmc.R")
+	source("~/git/occupancy/static/occ.mcmc.R")
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-		sigma.beta=2,sigma.alpha=2)
+		sigma.beta=1.6,sigma.alpha=1.6)
 	tune <- list(beta=0.45,alpha=0.1)
 	out1 <- occ.mcmc(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 	
@@ -241,22 +243,33 @@ for(i in 1:n.sim){
 	### Fit false-positive occupancy model to dataset with false positives
 	###
 	
-	source("fp/occ.fp.marginal.lik.mcmc.R")
+	source("~/git/occupancy/fp/occ.fp.marginal.lik.mcmc.R")
 	start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-		sigma.beta=2,sigma.alpha=2)
+		sigma.beta=1.6,sigma.alpha=1.6,a=1,b=1)
 	tune <- list(beta=0.45,alpha=0.1)
-	out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
+	out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 		
+
+	source("analysis/simulation/occ.fp.occupied.only.mcmc.R")  # false positive occupancy model that
+	tune <- list(beta=0.4,alpha=0.1)
+	start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
+	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
+		sigma.beta=1.6,sigma.alpha=1.6,a=1,b=1)
+	out4 <- occ.fp.occupied.only.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,
+		n.mcmc,adapt=TRUE)  # fit model
+	print(out4$keep)
+
+	
 	
 	###
 	### Fit standard occupancy model to dataset with false positives (ignore false positives)
 	###
 
-	source("static/occ.mcmc.R")
+	source("~/git/occupancy/static/occ.mcmc.R")
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-		sigma.beta=2,sigma.alpha=2)
+		sigma.beta=1.6,sigma.alpha=1.6)
 	tune <- list(beta=0.45,alpha=0.1)
 	out3 <- occ.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
 
@@ -277,8 +290,11 @@ for(i in 1:n.sim){
 	sim <- rbind(sim,sim.sum(out1,mod="no fp",i))	
 	sim <- rbind(sim,sim.sum(out2,mod="fp",i))	
 	sim <- rbind(sim,sim.sum(out3,mod="ignore fp",i))	
+	sim <- rbind(sim,sim.sum(out4,mod="unoccupied only",i))	
 }
-sim$model <- ordered(sim$model,levels=c("no fp","fp","ignore fp"))
+
+
+sim$model <- ordered(sim$model,levels=c("no fp","fp","ignore fp","unoccupied only"))
 
 bwplot(mean~model|parameter,data=sim,scales=list(relation="free",y=list(rot=0)),ylab="Posterior",
 	panel=function(x,y,...){
