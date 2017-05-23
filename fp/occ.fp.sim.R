@@ -1,4 +1,4 @@
-setwd("~/Documents/git/Occupancy/")
+setwd("~/git/Occupancy/")
 rm(list=ls())
 
 library(lattice)
@@ -163,19 +163,19 @@ sim <- data.frame("iteration"=NA,"model"=NA,"parameter"=NA,"q025"=NA,"q25"=NA,
 	"q75"=NA,"q975"=NA,"mean"=NA)
 sim <- sim[-1,]
 
-sim.sum <- function(out,mod,i){
-	beta.sum <- t(apply(out$beta,2,function(x) 
+sim.sum <- function(out,mod,burn=1000,i){
+	beta.sum <- t(apply(out$beta[(burn+1):nrow(out$beta),],2,function(x) 
 		c(quantile(x,c(0.025,0.25,0.75,0.975)),mean(x))))
-	alpha.sum <- t(apply(out$alpha,2,function(x) 
+	alpha.sum <- t(apply(out$alpha[(burn+1):nrow(out$alpha),],2,function(x) 
 		c(quantile(x,c(0.025,0.25,0.75,0.975)),mean(x)))) 
 	tmp <- data.frame(i,mod,c("beta0","beta1","alpha0","alpha1"),rbind(beta.sum,alpha.sum))
 	names(tmp) <- c("iteration","model","parameter","q025","q25","q75","q975","mean")
 	tmp
 }
 
-n.mcmc <- 5000  # number of MCMC iterations to perform for each model
-n.sim <- 50
-for(i in 1:n.sim){
+n.mcmc <- 21000  # number of MCMC iterations to perform for each model
+n.sim <- 1000
+for(i in 1:(n.sim*2)){
 
 	cat("\n")
 	print(i)
@@ -185,31 +185,31 @@ for(i in 1:n.sim){
 	### Simulate 'single-season' occupancy data
 	###
 	
-	n <- 300  # number of individuals
+	n <- 100  # number of individuals
 	J <- 3  # number of samples per individual
 	
 	# Heterogeneity in occupancy
 	X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy
 	qX <- ncol(X)
-	beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy
+	beta <- matrix(c(0,1),2,1)  # coefficients for occupancy
 	psi <- expit(X%*%beta)  # occupancy probability
 	# hist(psi)
-	
+
 	# Heterogeneity in detection
 	W <- array(1,dim=c(n,2,J))  # design matrix for detection
 	qW <- dim(W)[2]
 	for(j in 1:J){
 		W[,2,j] <- rnorm(n)
 	}
-
+	
 	alpha <- matrix(c(-1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}
 	# alpha <- matrix(c(0.25,0.25),2,1)  # coefficients for detection; biased beta p\in{0.3,0.7}
 	# alpha <- matrix(c(0,-0.5),2,1)  # coefficients for detection; biased beta p\in{0.2,0.8}
 	# alpha <- matrix(c(2,0.5),2,1)  # coefficients for detection; unbiased beta p\in{0.65,0.97}
 	# alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.2,0.95}
 	p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
-	# summary(p)
-	
+	summary(p)
+		
 	# State process and observations
 	z <- rbinom(n,1,psi)  # simulated occupancy state
 	Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
@@ -219,11 +219,12 @@ for(i in 1:n.sim){
 	### Add false positives to dataset
 	###
 
-	phi <- 0.09  # probability of false positive
+	# phi <- 0.1  # probability of false positive
+	phi <- ifelse(i<=n.sim,0.05,0.1)
 	Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables
 	Y.tilde <- Y+Q  # add false positives to data set
 	Y.tilde[Y.tilde==2] <- 1
-M <- 36
+M <- 50
 ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
 	
 	
@@ -235,9 +236,9 @@ ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=1.6,sigma.alpha=1.6)
-	tune <- list(beta=0.45,alpha=0.1)
+	tune <- list(beta=0.3,alpha=0.3)
 	out1 <- occ.mcmc(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
-	
+	print(out1$keep)	
 
 	###
 	### Fit false-positive occupancy model to dataset with false positives
@@ -247,20 +248,18 @@ ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
 	start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=1.6,sigma.alpha=1.6,a=1,b=1)
-	tune <- list(beta=0.45,alpha=0.1)
+	tune <- list(beta=0.3,alpha=0.3)
 	out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
-		
+	print(out2$keep)		
 
-	source("analysis/simulation/occ.fp.occupied.only.mcmc.R")  # false positive occupancy model that
-	tune <- list(beta=0.4,alpha=0.1)
+	source("~/Documents/projects/false_positive_occupancy/analysis/simulation/occ.fp.unoccupied.only.mcmc.R")  # false positive occupancy model that
+	tune <- list(beta=0.3,alpha=0.3)
 	start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=1.6,sigma.alpha=1.6,a=1,b=1)
-	out4 <- occ.fp.occupied.only.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,
+	out4 <- occ.fp.unoccupied.only.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,
 		n.mcmc,adapt=TRUE)  # fit model
 	print(out4$keep)
-
-	
 	
 	###
 	### Fit standard occupancy model to dataset with false positives (ignore false positives)
@@ -270,9 +269,9 @@ ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
 	start <- list(beta=beta,alpha=alpha)  # starting values
 	priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
 		sigma.beta=1.6,sigma.alpha=1.6)
-	tune <- list(beta=0.45,alpha=0.1)
+	tune <- list(beta=0.3,alpha=0.3)
 	out3 <- occ.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model
-
+	print(out3$keep)
 	
 	###
 	### Other modeling options to pursue
@@ -287,24 +286,31 @@ ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
 	### Summarize results
 	###
 
-	sim <- rbind(sim,sim.sum(out1,mod="no fp",i))	
-	sim <- rbind(sim,sim.sum(out2,mod="fp",i))	
-	sim <- rbind(sim,sim.sum(out3,mod="ignore fp",i))	
-	sim <- rbind(sim,sim.sum(out4,mod="unoccupied only",i))	
+	sim <- rbind(sim,sim.sum(out1,mod="no fp",burn=1000,i))	
+
+sim.sum(out4,model="Occupancy",
+		data="No false positives",threshold=NA,i,beta,alpha,N=sum(z),phi=phi.tmp,burn=1000)
+
+	sim <- rbind(sim,sim.sum(out2,mod="fp",burn=1000,i))	
+	sim <- rbind(sim,sim.sum(out3,mod="ignore fp",burn=1000,i))	
+	sim <- rbind(sim,sim.sum(out4,mod="unoccupied only",burn=1000,i))	
 }
 
 
 sim$model <- ordered(sim$model,levels=c("no fp","fp","ignore fp","unoccupied only"))
 
-bwplot(mean~model|parameter,data=sim,scales=list(relation="free",y=list(rot=0)),ylab="Posterior",
-	panel=function(x,y,...){
+bwplot(mean~model|parameter,data=sim[1:16000+16000,],scales=list(relation="free",y=list(rot=0)),
+	ylab="Posterior",panel=function(x,y,...){
 		panel.violin(x,y,col="lightgray",...)		
 		panel.abline(h=c(alpha,beta)[panel.number()],lty=2,col=1)
 })
 
 # Calculate coverage of 95% credible intervals
 cov <- data.frame(model=sim$model,parameter=sim$parameter,cov=NA)
-param.tmp <- rep(c(beta,alpha),n.sim*3)
+param.tmp <- rep(c(beta,alpha),n.sim*4*2)
 cov$cov <- ifelse(sim$q025<param.tmp&sim$q975>param.tmp,1,0)
 
-tapply(cov$cov,list(cov$model,cov$parameter),sum)/n.sim  # coverage
+
+nrow(cov)
+idx <- 1:(nrow(cov)/2)+nrow(cov)/2
+tapply(cov$cov[idx],list(cov$model[idx],cov$parameter[idx]),sum)/n.sim  # coverage

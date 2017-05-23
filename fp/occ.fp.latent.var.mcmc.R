@@ -194,7 +194,7 @@ occ.fp.latent.var.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRU
 	keep <- lapply(keep,function(x) x/n.mcmc)
 	end <- list(beta=beta,alpha=alpha,z=z,Q=Q,phi=phi)  # starting values
 	
-	list(beta=beta.save,alpha.save=alpha.save,phi=phi.save,N=N.save,
+	list(beta=beta.save,alpha=alpha.save,phi=phi.save,N=N.save,
 		z.mean=z.mean,Q.mean=Q.mean,keep=keep,end=end,Y=Y,X=X,W=W,
 		priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }

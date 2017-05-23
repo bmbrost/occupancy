@@ -72,6 +72,7 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 	
 	beta.save <- matrix(0,n.mcmc,qX)
 	alpha.save <- matrix(0,n.mcmc,qW)
+	phi.save <- numeric(n.mcmc)
 	z.mean <- numeric(n)
 	N.save <- numeric(n.mcmc)
 
@@ -178,6 +179,6 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 	keep <- lapply(keep,function(x) x/n.mcmc)
 	end <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 	
-	list(beta=beta.save,alpha.save=alpha.save,phi=phi.save,N=N.save,z.mean=z.mean,
+	list(beta=beta.save,alpha=alpha.save,phi=phi.save,N=N.save,z.mean=z.mean,
 		keep=keep,end=end,Y=Y,X=X,W=W,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
