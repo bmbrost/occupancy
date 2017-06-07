@@ -173,7 +173,7 @@ sim.sum <- function(out,mod,burn=1000,i){
 	tmp
 }
 
-n.mcmc <- 21000  # number of MCMC iterations to perform for each model
+n.mcmc <- 11000  # number of MCMC iterations to perform for each model
 n.sim <- 1000
 for(i in 1:(n.sim*2)){
 
