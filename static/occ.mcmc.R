@@ -1,4 +1,4 @@
-occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE,update.z=TRUE){
 
 #
 #  Mevin Hooten (20111031), Last Updated: 20131029
@@ -56,7 +56,8 @@ occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	beta <- as.vector(start$beta)
 	alpha <- as.vector(start$alpha)
-	z <- ifelse(y>0,1,0)
+	# z <- ifelse(y>0,1,0)
+	z <- start$z
 	psi <- expit(X%*%beta)
 	p <- apply(W,3,function(x) expit(x%*%alpha))
 	
@@ -134,10 +135,12 @@ occ.mcmc <- function(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		###
 	  	###  Sample z 
 	  	###
-
-		p0.tmp <- psi*apply(p^Y*(1-p)^(1-Y),1,prod)
-		psi.tmp <- p0.tmp/(p0.tmp+(1-psi))	
-		z[y0] <- rbinom(n.y0,1,psi.tmp[y0])
+		
+		if(update.z==TRUE){
+			p0.tmp <- psi*apply(p^Y*(1-p)^(1-Y),1,prod)
+			psi.tmp <- p0.tmp/(p0.tmp+(1-psi))	
+			z[y0] <- rbinom(n.y0,1,psi.tmp[y0])	
+		}
 	
 	
 		###

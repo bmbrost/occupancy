@@ -1,4 +1,4 @@
-occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE,update.z=TRUE){
 
 	###
 	###  Libraries and subroutines
@@ -152,11 +152,13 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 	  	###  Sample z 
 	  	###
 # browser()
-		p1 <- psi*apply(y.lik(Y,p,phi),1,prod)
-		# p1 <- psi*apply((1-phi)*p^Y*(1-p)^(1-Y)+phi*Y,1,prod)
-		p0 <- (1-psi)*apply(phi^Y*(1-phi)^(1-Y),1,prod)
-		psi.tmp <- p1/(p1+p0)	
-		z <- rbinom(n,1,psi.tmp)
+		if(update.z==TRUE){
+			p1 <- psi*apply(y.lik(Y,p,phi),1,prod)
+			# p1 <- psi*apply((1-phi)*p^Y*(1-p)^(1-Y)+phi*Y,1,prod)
+			p0 <- (1-psi)*apply(phi^Y*(1-phi)^(1-Y),1,prod)
+			psi.tmp <- p1/(p1+p0)	
+			z <- rbinom(n,1,psi.tmp)			
+		}
 
 			
 		###
