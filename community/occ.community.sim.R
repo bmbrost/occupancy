@@ -59,6 +59,7 @@ hist(psi[,])
 qW <- 1
 alpha <- matrix(rnorm(n,0.5,1.5),1,n)  # coefficients unique to species
 p <- pnorm(alpha)
+hist(p)
 
 # W <- array(cbind(1,rnorm(n)),dim=c(n,2,1))
 # W <- array(NA,dim=c(n,2,J))
@@ -93,12 +94,13 @@ round(cbind(psi=psi[,idx],z=z[,idx],p=c(p),fo=Y[,idx]/J[idx]),2)
 source("community/occ.community.mcmc.R")
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),sigma.beta=1.5,sigma.alpha=1.5,a=1,b=1)
 start <- list(beta=beta,alpha=alpha,z=z)
+tune <- list(alpha=0.1)
+out1 <- occ.community.mcmc(Y,J,W=NULL,X,priors,start,tune,n.mcmc=10000,adapt=TRUE)
+out1$tune
+idx <- 2
+matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
+matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
 
-out1 <- occ.community.mcmc(Y,J,W=NULL,X,priors,start,n.mcmc=1000,adapt=TRUE)
-
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)
-matplot(out1$alpha1,type="l");abline(h=alpha1,col=1:2,lty=2)
-matplot(out1$alpha2,type="l");abline(h=alpha2,col=1:2,lty=2)
 apply(out1$beta,2,mean)
 apply(out1$alpha1,2,mean)
 apply(out1$alpha2,2,mean)

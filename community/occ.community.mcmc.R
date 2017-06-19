@@ -1,4 +1,4 @@
-occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,n.mcmc,adapt=TRUE){
+occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	#
 	#  	Brian Brost (11 JUN 2014)
@@ -26,6 +26,21 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,n.mcmc,adapt=TRUE){
 		x <- qnorm(tmp,mu,sqrt(sig2))
 		x
 	}
+	
+	expit <- function(logit){
+		exp(logit)/(1+exp(logit)) 
+	}
+	
+	logit <- function(expit){
+		log(expit/(1-expit))
+	}
+
+	get.tune <- function(tune,keep,k,target=0.44){  # adaptive tuning
+		a <- min(0.01,1/sqrt(k))
+		# a <- min(0.025,1/sqrt(k))
+		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
+	}
+
 	
 
 	###
@@ -58,6 +73,8 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,n.mcmc,adapt=TRUE){
 
 	Sigma.beta <- diag(qX)*sigma.beta^2
 	Sigma.alpha <- diag(qW)*sigma.alpha^2	
+	Sigma.beta.inv <- solve(Sigma.beta)	
+	Sigma.alpha.inv <- solve(Sigma.alpha)	
 	
 	
 	###
@@ -66,6 +83,8 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,n.mcmc,adapt=TRUE){
 
 	beta <- start$beta
 	alpha <- start$alpha
+	p <- expit(alpha)
+	z <- start$z
 	
 	
 	###
@@ -82,7 +101,11 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,n.mcmc,adapt=TRUE){
 	# z.mean <- numeric(n)
 	# N.save <- numeric(n.mcmc)
 
-	
+	keep <- list(beta=0,alpha=0)
+	keep.tmp <- keep
+	Tb <- 50  # frequency of adaptive tuning
+
+
 	###
 	###  Begin MCMC Loop 
 	###
@@ -90,25 +113,38 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,n.mcmc,adapt=TRUE){
 	for(k in 1:n.mcmc){
 		if(k%%1000==0) cat(k," "); flush.console()
 
-browser()		
+# browser()		
+
+		###
+		### Adaptive tuning
+		###
 		
+		if(adapt==TRUE & k%%Tb==0) {  # Adaptive tuning
+			keep.tmp <- lapply(keep.tmp,function(x) x/Tb)
+			keep.tmp$alpha <- keep.tmp$alpha/n
+			# tune$beta <- get.tune(tune$beta,keep.tmp$beta,k)
+			tune$alpha <- get.tune(tune$alpha,keep.tmp$alpha,k)
+			keep.tmp <- lapply(keep.tmp,function(x) x*0)
+	   	} 	
+	   	
+	   			
 		###
 		###  Sample v (auxilliary variable for z) 
 		###
 
-		z0 <- z==0
-		z1 <- z==1
+		# z0 <- z==0
+		# z1 <- z==1
 
 		for(i in 1:R){
-			i <- 1
+			# i <- 1
 			z0 <- z[,i]==0
 			z1 <- z[,i]==1
-			v[z0,i] <- truncnormsamp(matrix(X[i,],,qX)%*%beta[,z0],1,0,Inf,sum(z0))
-
+			v[z0,i] <- truncnormsamp(matrix(X[i,],,qX)%*%beta[,z0],1,-Inf,0,sum(z0))
+			v[z1,i] <- truncnormsamp(matrix(X[i,],,qX)%*%beta[,z1],1,0,Inf,sum(z1))
 		}
 
-		v[z1] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta,1,0,Inf,sum(z1))
-		v[z0] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta,1,-Inf,0,sum(z0))
+		# v[z1] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta,1,0,Inf,sum(z1))
+		# v[z0] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta,1,-Inf,0,sum(z0))
 
 		# library(msm)	
 		# v[z1] <- rtnorm(sum(z1),(X%*%beta)[z1],lower=0)
@@ -119,53 +155,98 @@ browser()
 		###  Sample psi
 		###
 
-		A <- solve(t(X)%*%X+solve(Sigma.beta))
-		b <- t(X)%*%v+solve(Sigma.beta)%*%mu.beta
-		beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-		# beta <- t(rmvnorm(1,A%*%b,A))
-		psi <- pnorm(X%*%beta)
+# browser()	
+		for (i in 1:n){
+			A <- solve(t(X)%*%X+Sigma.beta.inv)
+			b <- t(X)%*%v[i,]+Sigma.beta.inv%*%mu.beta			
+			beta[,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
+			psi[i,] <- pnorm(X%*%beta[,i])
+		}
+
+		# A <- solve(t(X)%*%X+solve(Sigma.beta))
+		# b <- t(X)%*%v+solve(Sigma.beta)%*%mu.beta
+		# beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
+		# # beta <- t(rmvnorm(1,A%*%b,A))
+		# psi <- pnorm(X%*%beta)
 		
+		
+		###
+	  	###  Sample p (alpha)
+	  	###
+# browser()
+		alpha.star <- rnorm(n,alpha,tune$alpha)
+		p.star <- expit(alpha.star)
+
+		for(i in 1:n){
+			# i <- 7
+			z1 <- z[i,]==1	
+			# mean(Y[i,z1]/J[z1])
+		 	mh.star <- sum(dbinom(Y[i,z1],J[z1],p.star[i],log=TRUE))+
+		 		sum(dnorm(alpha.star[i],mu.alpha,sigma.alpha,log=TRUE))
+		 	mh.0 <- sum(dbinom(Y[i,z1],J[z1],p[i],log=TRUE))+
+		 		sum(dnorm(alpha[i],mu.alpha,sigma.alpha,log=TRUE))
+			if(exp(mh.star-mh.0) > runif(1)){
+				alpha[i] <- alpha.star[i]
+				p[i] <- p.star[i]
+				keep$alpha <- keep$alpha+1
+				keep.tmp$alpha <- keep.tmp$alpha+1
+		  	}			
+		}
+		
+		# z1 <- z==1	
+	  	# alpha.star <- rnorm(qW,alpha,tune$alpha)
+	  	# p.star <- apply(W,3,function(x) expit(x%*%alpha.star))	 	
+	 	# mh.star <- sum(dbinom(Y[z1,],1,p.star[z1,],log=TRUE))+
+	 		# sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
+	 	# mh.0 <- sum(dbinom(Y[z1,],1,p[z1,],log=TRUE))+
+	 		# sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
+		# if(exp(mh.star-mh.0) > runif(1)){
+			# alpha <- alpha.star
+			# p <- p.star
+			# keep$alpha <- keep$alpha+1
+			# keep.tmp$alpha <- keep.tmp$alpha+1
+	  	# }
 				
 		###
 		###  Sample u (auxilliary variable for p) 
 		###
 		
-		idx1 <- which(Y.long==1&z1)
-		idx0 <- which(Y.long==0&z1)	
-		u[idx1] <- truncnormsamp((matrix(W.long[idx1,],,qW)%*%alpha),1,0,Inf,length(idx1))			
-		u[idx0] <- truncnormsamp((matrix(W.long[idx0,],,qW)%*%alpha),1,-Inf,0,length(idx0))
+		# idx1 <- which(Y.long==1&z1)
+		# idx0 <- which(Y.long==0&z1)	
+		# u[idx1] <- truncnormsamp((matrix(W.long[idx1,],,qW)%*%alpha),1,0,Inf,length(idx1))	
+		# u[idx0] <- truncnormsamp((matrix(W.long[idx0,],,qW)%*%alpha),1,-Inf,0,length(idx0))
 
 		
 		###
 		###  Sample p 
 		###
 
-		u.tmp <- u[z1]
-		W.tmp <- W.long[z1,]		
-		A <- solve(t(W.tmp)%*%W.tmp+solve(Sigma.alpha))
-		b <- u.tmp%*%W.tmp+t(mu.alpha)%*%solve(Sigma.alpha)
-		alpha <- A%*%t(b)+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
-		p <- matrix(apply(W.long,1,function(x) pnorm(x%*%alpha)),,max(J))
+		# u.tmp <- u[z1]
+		# W.tmp <- W.long[z1,]		
+		# A <- solve(t(W.tmp)%*%W.tmp+solve(Sigma.alpha))
+		# b <- u.tmp%*%W.tmp+t(mu.alpha)%*%solve(Sigma.alpha)
+		# alpha <- A%*%t(b)+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
+		# p <- matrix(apply(W.long,1,function(x) pnorm(x%*%alpha)),,max(J))
 
 		
 		###
 		###  Sample z 
 		###
 		
-		p.tmp <- apply(1-p,1,prod)
-		num.tmp <- psi*p.tmp
-		psi.tmp <- num.tmp/(num.tmp+(1-psi))
-		z[y==0] <- rbinom(sum(y==0),1,psi.tmp[y==0])
+		# p.tmp <- apply(1-p,1,prod)
+		# num.tmp <- psi*p.tmp
+		# psi.tmp <- num.tmp/(num.tmp+(1-psi))
+		# z[y==0] <- rbinom(sum(y==0),1,psi.tmp[y==0])
 		
 		
 		###
 		###  Save samples 
 		###
-
-		beta.save[k,] <- beta
-		alpha.save[k,] <- alpha
+# k <- 1
+		beta.save[,,k] <- t(beta)
+		alpha.save[,,k] <- alpha
 		z.mean <- z.mean+z/n.mcmc
-		N.save[k] <- sum(z)
+		# N.save[k] <- sum(z)
 	
 		}
 	cat("\n")
@@ -174,8 +255,12 @@ browser()
 	###  Write output 
 	###
 	
+	keep$alpha <- keep$alpha/n
+	keep <- lapply(keep,function(x) x/n.mcmc)
+	end <- list(beta=beta,alpha=alpha,z=z)  # starting values
+
 	list(beta=beta.save,alpha=alpha.save,N=N.save,z.mean=z.mean,
-	Y=Y,W=W,X=X,priors=priors,start=start,n.mcmc=n.mcmc)
+	Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
 
 
