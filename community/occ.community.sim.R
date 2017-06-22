@@ -1,52 +1,62 @@
-setwd("~/Documents/git/Occupancy/")
+###
+### Code to simulate community occupancy data with optional
+### correlated detection and occurrence probabilities, and to fit  
+### the uncorrelated and correlated models. See Royle and Dorazio (2008)
+### and Dorazio et al. (2011) for further details.
+###
+
+setwd("~/git/Occupancy/")
 
 rm(list=ls())
 
 # options(error=recover)
 # options(error=stop)
 
-###
-###
-### Simulate static occupancy
-###
-###
+library(mvtnorm)
+
+expit <- function(logit){
+		exp(logit)/(1+exp(logit)) 
+	}
+	
+logit <- function(expit){
+	log(expit/(1-expit))
+}
+
 
 #########################################################################
 ###  Simulate community occupancy data
 #########################################################################
 
-n <- 20  # total number of species in community
-R <- 30  # total number of sites
+###
+### General characteristics of simulated dataset
+###
+
+n <- 100  # total number of species in community
+R <- 100  # total number of sites
 J <- rpois(R,40)  # number of surveys conducted  at each site
 hist(J)
 
 
 ###
-### Occupancy design matrix and coefficients
+### Simulate detection and occupancy coefficients
 ###
 
-# Occupancy varies by site and species
-# Covariates for occupancy (site)
-X <- matrix(cbind(1,rnorm(R)),R,2)  # site-level covariates
-qX <- ncol(X)
-beta <- matrix(c(rnorm(n,-0.5,0.5),rnorm(n,1,0.5)),2,n)  # coefficients unique to species
-# psi <- t(apply(beta,2,function(x) pnorm(X%*%x)))  # occupancy probability by site and species
-psi <- sapply(1:R,function(x) pnorm(X[x,]%*%beta))
-hist(psi[,])
+# Mean, standard deviation, and correlation of detection and occupancy coefficients
+mu.alpha <- -0.5  # mean of detection intercept
+mu.beta <- c(0.5,1)  # mean of occupancy coefficients
+sigma.alpha <- 0.75  # standard deviation of species-level detection intercept
+sigma.beta <- 0.5  # standard deviation of species-level occupancy coefficients
+rho <- 0  # uncorrelated intercepts
+rho <- 0.5  # correlation between intercepts
 
+# Variance-covariance matrix
+Sigma <- diag(c(sigma.alpha,rep(sigma.beta,2)))  # variance of detection and occupancy coefficients
+Sigma[1,2] <- Sigma[2,1] <- Sigma[1,1]*Sigma[2,2]*rho  # covariance of intercepts
 
-# X <- array(cbind(1,rnorm(n)),c(n,2,R))
-
-# X <- array(1,dim=c(n,2,R))
-# for(i in 1:R){
-	# X[,2,i] <- rnorm(n)
-# }
-
-
-# beta <- matrix(c(0,3),2,1)
-# psi <- exp(X%*%beta)/(1+exp(X%*%beta))
-# psi <- pnorm(X%*%beta)
-# hist(psi)
+# Simulated coefficients
+theta <- rmvnorm(n,c(mu.alpha,mu.beta),Sigma)  # alpha_0, beta_0, and beta_1
+alpha <- matrix(theta[,1],1,n)  # alpha_0
+beta <- matrix(theta[,2:3],2,n)  # beta_0 and beta_1
 
 
 ###
@@ -54,23 +64,21 @@ hist(psi[,])
 ###
 
 # Detection varies by species only
-# Covariates for detectability (site and visit)
-# W <- matrix(1,1,n)
-qW <- 1
-alpha <- matrix(rnorm(n,0.5,1.5),1,n)  # coefficients unique to species
-p <- pnorm(alpha)
+W <- matrix(1,n,1)  # intercept-only
+qW <- ncol(W)
+p <- expit(alpha)  # detection probability by species
 hist(p)
 
-# W <- array(cbind(1,rnorm(n)),dim=c(n,2,1))
-# W <- array(NA,dim=c(n,2,J))
-# W[,1,] <- 1
-# for(i in 1:J){
-	# W[,2,i] <- rnorm(nrow(W[,,i]))
-# }
 
-# z <- rbinom(n,1,psi)
-# y <- rep(0,n)
-# y[z==1] <- rbinom(sum(z==1),J,p[z==1])
+###
+### Occupancy design matrix and coefficients
+###
+
+# Occupancy varies by site and species
+X <- matrix(cbind(1,rnorm(R)),R,2)  # site-level covariates
+qX <- ncol(X)
+psi <- sapply(1:R,function(x) pnorm(X[x,]%*%beta))  # occupancy probability by site and species
+hist(psi[,])
 
 
 ###
@@ -78,7 +86,7 @@ hist(p)
 ###
 
 z <- apply(psi,2,function(x) rbinom(n,1,x))
-# boxplot(c(psi),c(z))
+boxplot(c(psi)~c(z))
 
 
 ###
@@ -86,193 +94,95 @@ z <- apply(psi,2,function(x) rbinom(n,1,x))
 ###
 
 Y <- sapply(1:R,function(x) rbinom(n,J[x],p*z[,x]))
+# idx <- which(z==0)
+# Y[idx] <- NA
+# plot(p,colMeans(sapply(1:n,function(x) Y[x,]/J),na.rm=TRUE));abline(a=0,b=1,lty=2)
+
 idx <- 10
 round(cbind(psi=psi[,idx],z=z[,idx],p=c(p),fo=Y[,idx]/J[idx]),2)
 
 
-#  Fit occupancy model to two data sources
+#########################################################################
+###  Fit community occpuancy model assuming independent detection and occupancy intercepts
+#########################################################################
+
+###
+###  Fit model
+###
+
 source("community/occ.community.mcmc.R")
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),sigma.beta=1.5,sigma.alpha=1.5,a=1,b=1)
-start <- list(beta=beta,alpha=alpha,z=z)
-tune <- list(alpha=0.1)
-out1 <- occ.community.mcmc(Y,J,W=NULL,X,priors,start,tune,n.mcmc=10000,adapt=TRUE)
+priors <- list(sigma.mu.alpha=1.5,sigma.mu.beta=1.5,r=2,q=1)
+# hist(sqrt(1/rgamma(1000,1,,2)))
+start <- list(alpha=alpha,beta=beta,mu.alpha=rep(0,qW),mu.beta=rep(0,qX),z=z,
+	sigma.alpha=1.5,sigma.beta=1.5)
+tune <- list(alpha=0.15)
+out1 <- occ.community.mcmc(Y,J,W,X,priors,start,tune,n.mcmc=10000,adapt=TRUE)
 out1$tune
-idx <- 2
-matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
-matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
-
-apply(out1$beta,2,mean)
-apply(out1$alpha1,2,mean)
-apply(out1$alpha2,2,mean)
+out1$keep
 
 
+###
+### Examine output
+###
 
-#####
-#####  Simulate two data sources at varying temporal scales,
-#####  homogenous model (intercept only for occupany and detection)
-#####
+idx <- 100
+dev.new()
+matplot(out1$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
+matplot(out1$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
 
-n <- 1000
-J1 <- 4 # Visits per "site" for data source 1
-J2 <- 2 # Visits per "site" for data source 2
+matplot(out1$mu.beta,type="l");abline(h=mu.beta,col=1:2,lty=2)
+abline(h=rowMeans(beta),col=3:4,lty=2)
+plot(out1$mu.alpha,type="l");abline(h=mu.alpha,col=1,lty=2)
+abline(h=mean(alpha),col=3,lty=2)
 
-# Covariates for occupancy (site)
-X <- matrix(1,n,1)
-beta <- matrix(0,1,1)
-psi <- pnorm(X%*%beta)
-summary(psi)
+hist(out1$sigma.beta);abline(v=sigma.beta,lty=2,col=2);abline(v=apply(beta,1,var),col=3,lty=2)
+hist(out1$sigma.alpha);abline(v=sigma.alpha,lty=2,col=2);abline(v=apply(alpha,1,var),col=3,lty=2)
 
-# Covariates for detectability (site and visit)
-W1 <- array(1,dim=c(n,1,J1))
-alpha1 <- matrix(0,1,1)
-p1 <- apply(W1,3,function(x) pnorm(x%*%alpha1))
-summary(p1)
-
-W2 <- array(1,dim=c(n,1,J2))
-alpha2 <- matrix(0,1,1)
-p2 <- apply(W2,3,function(x) pnorm(x%*%alpha2))
-summary(p2)
-
-z <- rbinom(n,1,psi)
-Y1 <- sapply(1:J1,function(x) rbinom(n,1,z*p1[,x]))
-Y2 <- sapply(1:J2,function(x) rbinom(n,1,z*p2[,x]))
-
-# Add NA values to simulate missing data
-Y1[1000,3:4] <- NA
-W1[1000,1,3:4] <- NA
-Y2[1000,2] <- NA
-W2[1000,1,2] <- NA
-
-#  Fit occupancy model to two data sources
-source("static_occupancy/occ.probit.2.mcmc.R")
-out1 <- occ.probit.2.mcmc(Y1,Y2,W1,W2,X,500)
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)
-matplot(out1$alpha1,type="l");abline(h=alpha1,col=1:2,lty=2)
-matplot(out1$alpha2,type="l");abline(h=alpha2,col=1:2,lty=2)
-apply(out1$beta,2,mean)
-apply(out1$alpha1,2,mean)
-apply(out1$alpha2,2,mean)
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha1,2,quantile,c(0.025,0.975))
-apply(out1$alpha2,2,quantile,c(0.025,0.975))
-
-plot(z,out1$z.mean)
+boxplot(out1$z.mean~z)
+out1$z.mean[z==0]
 
 
-#####
-#####  Simulate two data sources, homogenous model (intercept only for occupany and detection)
-#####
+#########################################################################
+###  Fit community occupancy model assuming correlated detection and occupancy intercepts
+############################################################################
 
-n <- 1000
-J <- 5
+###
+### Fit model
+###
 
-# Covariates for occupancy (site)
-X <- matrix(1,n,1)
-beta <- matrix(0,1,1)
-psi <- pnorm(X%*%beta)
-summary(psi)
-
-# Covariates for detectability (site and visit)
-W <- array(1,dim=c(n,1,J))
-
-alpha1 <- matrix(0,1,1)
-p1 <- apply(W,3,function(x) pnorm(x%*%alpha1))
-summary(p1)
-
-alpha2 <- matrix(0,1,1)
-p2 <- apply(W,3,function(x) pnorm(x%*%alpha2))
-summary(p2)
-
-z <- rbinom(n,1,psi)
-Y1 <- sapply(1:J,function(x) rbinom(n,1,z*p1[,x]))
-Y2 <- sapply(1:J,function(x) rbinom(n,1,z*p2[,x]))
-
-#  Fit occupancy model to two data sources
-source("static_occupancy/occ.probit.2.mcmc.R")
-out1 <- occ.probit.2.mcmc(Y1,Y2,rep(J,n),rep(J,n),W,W,X,5000)
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)
-matplot(out1$alpha1,type="l");abline(h=alpha1,col=1:2,lty=2)
-matplot(out1$alpha2,type="l");abline(h=alpha2,col=1:2,lty=2)
-apply(out1$beta,2,mean)
-apply(out1$alpha1,2,mean)
-apply(out1$alpha2,2,mean)
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha1,2,quantile,c(0.025,0.975))
-apply(out1$alpha2,2,quantile,c(0.025,0.975))
+source("community/occ.community.correlated.mcmc.R")
+priors <- list(S0=diag(2),nu=3,sigma.mu.0=1.5,sigma.mu.beta=1.5,r=2,q=1)
+# hist(sqrt(1/rgamma(1000,1,,2)))
+start <- list(alpha=alpha,beta=beta,z=z,mu.alpha=rep(0,qW),mu.beta=rep(0,qX),
+	Sigma=diag(2)*1.5,sigma.beta=1)
+tune <- list(alpha=0.15,beta=0.3)
+out2 <- occ.community.correlated.mcmc(Y,J,W,X,priors,start,tune,n.mcmc=10000,adapt=TRUE)
+out2$tune
+out2$keep
 
 
+###
+### Examine output
+###
 
-#####
-#####  Simulate one data source, fully heterogeneous model (covariates on occupancy and detection)
-#####
+idx <- 38
+matplot(out2$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
+matplot(out2$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
 
-n <- 1000 #Number of sites
-J <- 3 #Number of visits
+matplot(out2$mu.alpha,type="l");abline(h=mu.alpha,col=1:qW,lty=2);abline(h=rowMeans(alpha),col=3,lty=2)
+matplot(out2$mu.beta,type="l");abline(h=mu.beta,col=1:qX,lty=2);abline(h=rowMeans(beta),col=3,lty=2)
 
-# Covariates for occupancy (site)
-X <- matrix(cbind(1,rnorm(n)),n,2)
-beta <- matrix(c(0,3),2,1)
-# psi <- exp(X%*%beta)/(1+exp(X%*%beta))
-psi <- pnorm(X%*%beta)
-summary(psi)
+hist(out2$Sigma[1,1,],breaks=50);abline(v=Sigma[1,1],lty=2,col=2)
+abline(v=var(alpha[1,]),col=3,lty=2)
+hist(out2$Sigma[2,2,],breaks=50);abline(v=Sigma[2,2],lty=2,col=2)
+abline(v=var(beta[1,]),col=3,lty=2)
+hist(out2$Sigma[1,2,],breaks=50);abline(v=Sigma[1,2],lty=2,col=2)
+abline(v=cov(alpha[1,],beta[1,]),col=3,lty=2)
 
-# Covariates for detectability (site and visit)
-# W <- array(cbind(1,rnorm(n)),dim=c(n,2,1))
-W <- array(NA,dim=c(n,2,J))
-W[,1,] <- 1
-for(i in 1:J){
-	W[,2,i] <- rnorm(nrow(W[,,i]))
-}
-alpha <- matrix(c(0,-3),2,1)
-# p <- exp(W[,,1]%*%alpha)/(1+exp(W[,,1]%*%alpha))
-# p <- pnorm(W[,,1]%*%alpha)
-p <- apply(W,3,function(x) pnorm(x%*%alpha))
-summary(p)
+hist(out2$sigma.beta);abline(v=sigma.beta,lty=2,col=2)
+abline(v=sd(beta[-1,]),col=3,lty=2)
 
-# z <- rbinom(n,1,psi)
-# y <- rep(0,n)
-# y[z==1] <- rbinom(sum(z==1),J,p[z==1])
-
-z <- rbinom(n,1,psi)
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))
-# y <- as.numeric(apply(y,1,sum))
-
-# Fit occupancy model to one data source
-source("static_occupancy/occ.probit.1.mcmc.R")
-out1 <- occ.probit.1.mcmc(Y,rep(J,n),W,X,1000)
-matplot(out1$beta.save,type="l");abline(h=beta,col=1:2,lty=2)
-matplot(out1$alpha.save,type="l");abline(h=alpha,col=1:2,lty=2)
-apply(out1$beta.save,2,mean)
-apply(out1$alpha.save,2,mean)
+boxplot(out2$z.mean~z)
+out2$z.mean[z==0]
 
 
-
-#####
-#####  Simulate one data source, homogenous model (intercept only for occupany and detection)
-#####
-
-n <- 1000 #Number of sites
-J <- 5 #Number of visits
-
-# Covariates for occupancy (site)
-X <- matrix(1,n,1)
-beta <- matrix(0,1,1)
-psi <- pnorm(X%*%beta)
-summary(psi)
-
-# Covariates for detectability (site and visit)
-W <- array(1,dim=c(n,1,J))
-alpha <- matrix(0,1,1)
-p <- apply(W,3,function(x) pnorm(x%*%alpha))
-summary(p)
-
-z <- rbinom(n,1,psi)
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))
-
-# Fit occupancy model to one data source
-source("static_occupancy/occ.probit.1.mcmc.R")
-out1 <- occ.probit.1.mcmc(Y,rep(J,n),W,X,1000)
-matplot(out1$beta.save,type="l");abline(h=beta,col=1:2,lty=2)
-matplot(out1$alpha.save,type="l");abline(h=alpha,col=1:2,lty=2)
-apply(out1$beta.save,2,mean)
-apply(out1$alpha.save,2,mean)
