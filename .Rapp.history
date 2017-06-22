@@ -1,702 +1,811 @@
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)
+pdf("manuscript/figures/Figure_3.pdf")#
+# par(mfrow=c(1,2))#
+tmp <- rbind(apply(fp2.distilled,2,mean),apply(fp2.natural,2,mean))#
+# colnames(tmp) <- c("0.05","0.175","1.0","50.0")#
+bp <- barplot(tmp,beside=TRUE,xlab="Concentration (z/mL)",col=c("gray85","gray50"),ylim=c(0,1),las=1,#
+	ylab="Detection probability (p)")#
+axis(1,at=c(2,5,8,11),labels=c("0.05","0.175","1.0","50.0"),tick=FALSE,padj=-1)#
+# legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
 #
-# Examine output#
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$beta,2,quantile,c(0.025,0.975))
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)
-apply(out2$beta,2,quantile,c(0.025,0.975))
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-(p^Y*(1-p)^(1-Y))^z
-(1-phi)*(p^Y*(1-p)^(1-Y))^z
-(p^Y*(1-p)^(1-Y))^z*Y0^(1-z)
-(p^Y*(1-p)^(1-Y))^z
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-Q
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-binom(y,1,p)
-dbinom(y,1,p)
-dbinom(y,1,p)^(1-Q)
-z
-(dbinom(y,1,p)^(1-Q))^z
-Y
-(dbinom(y,1,p)^(1-Q))
-z
-(dbinom(y,1,p)^(1-Q))
-(dbinom(y,1,p)^(1-Q))^z
-z
-(dbinom(y,1,p)^(1-Q))
-z
-(dbinom(Y,1,p)^(1-Q))^z
-log((dbinom(Y,1,p)^(1-Q))^z)
-mh.star <- sum(log((dbinom(Y,1,p)^(1-Q))^z))#
-	 		+sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-z1 <- z==1	#
-	  	alpha.star <- rnorm(qW,alpha,tune$alpha)#
-	  	p.star <- apply(W,3,function(x) expit(x%*%alpha.star))
-mh.star <- sum(log((dbinom(Y,1,p.star)^(1-Q))^z))#
-	 		+sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-mh.star <- sum(log((dbinom(Y,1,p.star)^(1-Q))^z))#
-	 		+sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-mh.star <- sum(log((dbinom(Y,1,p.star)^(1-Q))^z))+#
-	 		sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-mh.star
-setwd("~/Documents/git/Occupancy/")#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)#
+#
+dev.off()
+apply(fp2.natural,2,quantile,c(0.025,0.975))#
+apply(fp2.distilled,2,quantile,c(0.025,0.975))
+apply(fp2.natural,2,quantile,c(0.025,0.975))
+apply(fp1.natural,2,quantile,c(0.025,0.975))
+plot(1:4,fp2.natural[1,],type="l")
+plot(1:4,fp2.natural[1,],type="b")
+plot(1:4,fp2.natural[1,],type="b",ylim=c(0,1))
+summary(fp2.natural)
+fp2.natural.quant <- apply(fp2.natural,2,quantile,c(0.025,0.975))
+plot(1:4,fp2.natural.quant[1,],type="b",ylim=c(0,1))
+fp1.natural.quant <- apply(fp1.natural,2,quantile,c(0.025,0.975))
+plot(1:4,fp2.natural.quant[2,],type="b",ylim=c(0,1))
+lines(1:4,fp2.natural.quant[2,],type="b",ylim=c(0,1))
+plot(1:4,fp2.natural.quant[1,],type="b",ylim=c(0,1))
+lines(1:4,fp2.natural.quant[2,],type="b",ylim=c(0,1))
+lines(1:4,fp1.natural.quant[1,],type="b",ylim=c(0,1),col=2)
+lines(1:4,fp1.natural.quant[2,],type="b",ylim=c(0,1),col=2)
+fp2.distilled.quant <- apply(fp2.distilled,2,quantile,c(0.025,0.975))
+plot(1:4,fp2. distilled.quant[1,],type="b",ylim=c(0,1))#
+lines(1:4,fp2. distilled.quant[2,],type="b",ylim=c(0,1))
+fp2.distilled.quant <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+plot(1:4,fp2.distilled.quant[1,],type="b",ylim=c(0,1))#
+lines(1:4,fp2.distilled.quant[2,],type="b",ylim=c(0,1))
+fp1. distilled.quant <- apply(fp1.distilled,2,quantile,c(0.025,0.975))#
+lines(1:4,fp1.distilled.quant[1,],type="b",ylim=c(0,1),col=2)#
+lines(1:4,fp1.distilled.quant[2,],type="b",ylim=c(0,1),col=2)
+fp1.distilled.quant <- apply(fp1.distilled,2,quantile,c(0.025,0.975))
+lines(1:4,fp1.distilled.quant[1,],type="b",ylim=c(0,1),col=2)
+lines(1:4,fp1.distilled.quant[2,],type="b",ylim=c(0,1),col=2)
+dev.new()
+update.z <- FALSE
+start <- list(beta=rep(0,qX),alpha=rep(0,qW),z=ifelse(obs$conc_c!=0,1,0),phi=ctrl$v/ctrl$M)
+start
+tune <- list(beta=0.8,alpha=0.12)
+out1 <- occ.mcmc(Y,W,X,priors,start,tune,10000,adapt=TRUE,update.z=update.z)  # fit model#
+out1 <- occ.mcmc(Y,W,X,priors,out1$end,out1$tune,100000,adapt=FALSE,update.z=update.z)  # fit model
+out1$tune
+out2 <- occ.fp.unoccupied.only.mcmc(Y,ctrl,W,X,priors,start,tune,10000,adapt=TRUE,#
+	update.z=update.z)  # fit model#
+out2 <- occ.fp.unoccupied.only.mcmc(Y,ctrl,W,X,priors,out2$end,out2$tune,100000,adapt=FALSE,#
+	update.z=update.z)  # fit model#
+print(out2$keep)#
+out2$tune
+out3 <- occ.fp.marginal.lik.mcmc(Y,ctrl,W,X,priors,start,tune,10000,adapt=TRUE,#
+	update.z=update.z)  # fit model#
+out3 <- occ.fp.marginal.lik.mcmc(Y,ctrl,W,X,priors,out3$end,out3$tune,100000,adapt=FALSE,#
+	update.z=update.z)  	#
+print(out3$keep)		#
+out3$tune
+occ.natural <- sapply(c(NA,3:5),function(x)  # natural water#
+	expit(rowSums(out1$alpha[,c(1,x)],na.rm=TRUE)))#
+occ.distilled <- sapply(c(NA,3:5),function(x)  # distilled water#
+	expit(rowSums(out1$alpha[,c(1,2,x)],na.rm=TRUE)))
+fp1.natural <- sapply(c(NA,3:5),function(x)  # natural water#
+	expit(rowSums(out2$alpha[,c(1,x)],na.rm=TRUE)))#
+fp1.distilled <- sapply(c(NA,3:5),function(x)  # distilled water#
+	expit(rowSums(out2$alpha[,c(1,2,x)],na.rm=TRUE)))
+fp2.natural <- sapply(c(NA,3:5),function(x)  # natural water#
+	expit(rowSums(out3$alpha[,c(1,x)],na.rm=TRUE)))#
+fp2.distilled <- sapply(c(NA,3:5),function(x)  # distilled water#
+	expit(rowSums(out3$alpha[,c(1,2,x)],na.rm=TRUE)))
+fp2.natural.quant <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+plot(1:4,fp2.natural.quant[1,],type="b",ylim=c(0,1))#
+lines(1:4,fp2.natural.quant[2,],type="b",ylim=c(0,1))#
+#
+fp1.natural.quant <- apply(fp1.natural,2,quantile,c(0.025,0.975))#
+lines(1:4,fp1.natural.quant[1,],type="b",ylim=c(0,1),col=2)#
+lines(1:4,fp1.natural.quant[2,],type="b",ylim=c(0,1),col=2)
+fp2.distilled.quant <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+plot(1:4,fp2.distilled.quant[1,],type="b",ylim=c(0,1))#
+lines(1:4,fp2.distilled.quant[2,],type="b",ylim=c(0,1))#
+#
+fp1.distilled.quant <- apply(fp1.distilled,2,quantile,c(0.025,0.975))#
+lines(1:4,fp1.distilled.quant[1,],type="b",ylim=c(0,1),col=2)#
+lines(1:4,fp1.distilled.quant[2,],type="b",ylim=c(0,1),col=2)
+save.image("analysis/Bd/workspace.Rdata")
+apply(out3$alpha,2,quantile,c(0.025,0.975))
+dev.new()
+matplot(out3$alpha,type="l",lty=1)
+summary(fp2.natural)
+pdf("manuscript/figures/Figure_3.pdf")#
+# par(mfrow=c(1,2))#
+tmp <- rbind(apply(fp2.distilled,2,mean),apply(fp2.natural,2,mean))#
+# colnames(tmp) <- c("0.05","0.175","1.0","50.0")#
+bp <- barplot(tmp,beside=TRUE,xlab="Concentration (z/mL)",col=c("gray85","gray50"),ylim=c(0,1),las=1,#
+	ylab="Detection probability (p)")#
+axis(1,at=c(2,5,8,11),labels=c("0.05","0.175","1.0","50.0"),tick=FALSE,padj=-1)#
+# legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
+#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)#
+#
+dev.off()
+save.image("analysis/Bd/workspace.Rdata")
 rm(list=ls())#
 #
+setwd("~/Documents/projects/false_positive_occupancy")#
+#
+load("analysis/Bd/workspace.Rdata")#
+ls()
+colMeans(fp2.natural)
+colMeans(fp2.distilled)
+apply(out3$alpha,2,mean)
+apply(out3$alpha,2,quantile,c(0.025,0.975))
+expit(mean(out4$alpha[,2]))
+expit(mean(out3$alpha[,2]))
+out3$alpha
+apply(out3$alpha,2,quantile,c(0.025,0.975))
+expit(-2.13)
+expit(mean(out3$alpha[,1]))
+expit(mean(rowSums(out3$alpha[,1]:2)))
+expit(mean(rowSums(out3$alpha[,1:2])))
+expit(mean(out3$alpha[,1]))
+0.57-0.12
+colMeans(fp2.natural)-colMeans(fp2.distilled)
+mean(colMeans(fp2.natural)-colMeans(fp2.distilled))
+mean(fp2.natural-fp2.distilled)
+apply(out3$alpha,2,quantile,c(0.025,0.975))
+mean(fp2.natural-fp2.distilled)#
+quantile(fp2.natural-fp2.distilled,c(0.025,0.975))
+colMeans(fp1.natural)-colMeans(fp2.natural)
+mean(fp2.distilled-fp2.natural)
+expit(mean(out3$alpha[,1]))
+expit(mean(rowSums(out3$alpha[,1:2])))
+57-13
+(fp2.natural-fp1.natural)
+(fp2.natural-fp1.natural)/fp2.natural
+summary(fp2.natural-fp1.natural)/fp2.natural
+summary((fp2.natural-fp1.natural)/fp2.natural)
+summary((fp1.natural-fp2.natural)/fp2.natural)
+summary((occ.natural-fp2.natural)/fp2.natural)
+summary((fp1.distilled-fp2.distilled)/fp2.distilled)
+summary((occ.distilled-fp2.distilled)/fp2.distilled)
+summary((fp1.natural-fp2.natural)/fp2.natural)#
+summary((occ.natural-fp2.natural)/fp2.natural)
+summary((fp1.distilled-fp2.distilled)/fp2.distilled)#
+summary((occ.distilled-fp2.distilled)/fp2.distilled)
+summary((fp1.natural-fp2.natural)/fp2.natural)#
+summary((occ.natural-fp2.natural)/fp2.natural)
+pdf("manuscript/figures/Figure_3.pdf")#
+# par(mfrow=c(1,2))#
+tmp <- rbind(apply(fp2.distilled,2,mean),apply(fp2.natural,2,mean))#
+# colnames(tmp) <- c("0.05","0.175","1.0","50.0")#
+bp <- barplot(tmp,beside=TRUE,xlab="Concentration (zoospore/mL)",#
+	col=c("gray85","gray50"),ylim=c(0,1),las=1,ylab="Detection probability (p)")#
+axis(1,at=c(2,5,8,11),labels=c("0.05","0.175","1.0","50.0"),tick=FALSE,padj=-1)#
+# legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
+#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)#
+#
+dev.off()
+apply(out3$alpha,2,quantile,c(0.025,0.975))
+expit(mean(out3$alpha[,1]))
+expit(mean(rowSums(out3$alpha[,1:2])))
+mean(fp2.natural-fp2.distilled)
+quantile(fp2.natural-fp2.distilled,c(0.025,0.975))
+(out1$alpha-out3$alpha)/out3$alpha
+summary((out1$alpha-out3$alpha)/out3$alpha)
+matplot(out1$alpha,type="l",lty=1)
+fp1.distilled
+(colMeans(fp1.natural)-colMeans(fp2.natural))/colMeans(fp2.natural)
+(colMeans(occ.natural)-colMeans(fp2.natural))/colMeans(fp2.natural)
+(colMeans(fp1.distilled)-colMeans(fp2.distilled))/colMeans(fp2.distilled)
+(colMeans(occ.distilled)-colMeans(fp2.distilled))/colMeans(fp2.distilled)
+colMeans(out1$alpha)
+(colMeans(out1$alpha)-colMeans(out3$alpha))/colMeans(out1$alpha)-colMeans(out3$alpha)
+(colMeans(out1$alpha)-colMeans(out3$alpha))/colMeans(out3$alpha)
+(colMeans(out2$alpha)-colMeans(out3$alpha))/colMeans(out3$alpha)
+mean(out1$alpha[,1])
+mean(out1$alpha[,2])
+mean(out1$alpha[,1])#
+mean(out2$alpha[,1])#
+mean(out3$alpha[,1])
+expit(mean(out1$alpha[,1]))#
+expit(mean(out2$alpha[,1]))#
+expit(mean(out3$alpha[,1]))
+(colMeans(out1$alpha)-colMeans(out3$alpha))/colMeans(out3$alpha)
+colMeans(out1$alpha)
+colMeans(out3$alpha)
+(colMeans(fp1.natural)-colMeans(fp2.natural))/colMeans(fp2.natural)
+(colMeans(fp1.distilled)-colMeans(fp2.distilled))/colMeans(fp2.distilled)
+(colMeans(occ.distilled)-colMeans(fp2.distilled))/colMeans(fp2.distilled)
+fp2.distilled.quant <- apply(fp2.distilled,2,quantile,c(0.025,0.975))
+plot(1:4,fp2.distilled.quant[1,],type="b",ylim=c(0,1))
+lines(1:4,fp2.distilled.quant[2,],type="b",ylim=c(0,1))
+fp1.distilled.quant <- apply(fp1.distilled,2,quantile,c(0.025,0.975))
+lines(1:4,fp1.distilled.quant[1,],type="b",ylim=c(0,1),col=2)
+lines(1:4,fp1.distilled.quant[2,],type="b",ylim=c(0,1),col=2)
+fp1.distilled.quant
+fp2.distilled.quant
+0.08+0.08*0.34
+expit(mean(out1$alpha[,1]))
+expit(mean(out2$alpha[,1]))
+expit(mean(out3$alpha[,1]))
+apply(out3$alpha,2,quantile,c(0.025,0.975))
+expit(mean(out3$alpha[,1]))
+expit(mean(rowSums(out3$alpha[,1:2])))
+colMeans(out3$alpha)
+tmp <- rbind(apply(fp2.distilled,2,mean),apply(fp2.natural,2,mean))#
+# colnames(tmp) <- c("0.05","0.175","1.0","50.0")#
+bp <- barplot(tmp,beside=TRUE,xlab="Bd concentration (zoospore/mL)",#
+	col=c("gray85","gray50"),ylim=c(0,1),las=1,ylab="Detection probability (p)")#
+axis(1,at=c(2,5,8,11),labels=c("0.05","0.175","1.0","50.0"),tick=FALSE,padj=-1)#
+# legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
+#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)
+pdf("manuscript/figures/Figure_3.pdf")#
+# par(mfrow=c(1,2))#
+tmp <- rbind(apply(fp2.distilled,2,mean),apply(fp2.natural,2,mean))#
+# colnames(tmp) <- c("0.05","0.175","1.0","50.0")#
+bp <- barplot(tmp,beside=TRUE,xlab="Bd concentration (zoospore/mL)",#
+	col=c("gray85","gray50"),ylim=c(0,1),las=1,ylab="Detection probability (p)")#
+axis(1,at=c(2,5,8,11),labels=c("0.05","0.175","1.0","50.0"),tick=FALSE,padj=-1)#
+# legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
+#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)#
+#
+dev.off()
+legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))
+pdf("manuscript/figures/Figure_3.pdf")#
+# par(mfrow=c(1,2))#
+tmp <- rbind(apply(fp2.distilled,2,mean),apply(fp2.natural,2,mean))#
+# colnames(tmp) <- c("0.05","0.175","1.0","50.0")#
+bp <- barplot(tmp,beside=TRUE,xlab="Bd concentration (zoospore/mL)",#
+	col=c("gray85","gray50"),ylim=c(0,1),las=1,ylab="Detection probability (p)")#
+axis(1,at=c(2,5,8,11),labels=c("0.05","0.175","1.0","50.0"),tick=FALSE,padj=-1)#
+# legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
+#
+ci.distilled <- apply(fp2.distilled,2,quantile,c(0.025,0.975))#
+ci.natural <- apply(fp2.natural,2,quantile,c(0.025,0.975))#
+arrows(bp[1,],ci.distilled[1,],bp[1,],ci.distilled[2,],angle=90,length=0.05,code=3)#
+arrows(bp[2,],ci.natural[1,],bp[2,],ci.natural[2,],angle=90,length=0.05,code=3)#
+legend("topleft",fill=c("gray85","gray50"),bty="n",legend=c("Distilled","Natural"))#
+dev.off()
+alpha <- matrix(c(-0.5,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}
+W <- array(1,dim=c(n,2,J))  # design matrix for detection#
+		for(j in 1:J){#
+			W[,2,j] <- rnorm(n)#
+		}#
+		p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
+		summary(p)
+setwd("~/Documents/projects/false_positive_occupancy")#
+#
+rm(list=ls())
 library(lattice)#
+library(tidyverse)#
 #
 expit <- function(y){#
 	exp(y)/(1+exp(y)) #
-}
-n <- 100  # number of individuals#
-J <- 20  # number of samples per individual#
-#
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)#
-#
-# Heterogeneity in detection#
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}
-alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
-summary(p)
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
 }#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p
+#
+# Function for summarizing MCMC output#
+sim.sum <- function(out,model,data,threshold=NA,i,beta,alpha=NULL,N=FALSE,phi,burn=1000){  #
+	# browser()#
+	qX <- ncol(out$beta)#
+	beta.tmp <- out$beta[(burn+1):nrow(out$beta),]#
+	beta.sum <- t(apply(beta.tmp,2,function(x) #
+		c(mean(x),quantile(x,c(0.025,0.25,0.5,0.75,0.975)))))#
+	params <- paste0("beta",0:(qX-1))#
+	truth <- beta#
+	if(!is.null(alpha)){#
+		alpha.tmp <- out$alpha[(burn+1):nrow(out$alpha),]#
+		qW <- ncol(out$alpha)#
+		alpha.sum <- t(apply(alpha.tmp,2,function(x) #
+			c(mean(x),quantile(x,c(0.025,0.25,0.5,0.75,0.975)))))#
+		params <- c(params,paste0("alpha",0:(qW-1)))#
+		beta.sum <- rbind(beta.sum,alpha.sum)#
+		truth <- c(truth,alpha)#
+	}#
+	if(N!=FALSE){#
+		N.tmp <- out$N[(burn+1):length(out$N)]#
+		N.sum <- c(mean(N.tmp),quantile(N.tmp,c(0.025,0.25,0.5,0.75,0.975)))#
+		params <- c(params,"N")#
+		beta.sum <- rbind(beta.sum,N.sum)#
+		truth <- c(truth,N)#
+	}#
+	if(!is.null(out$phi)){#
+		phi.tmp <- out$phi[(burn+1):length(out$phi)]#
+		phi.sum <- c(mean(phi.tmp),quantile(phi.tmp,c(0.025,0.25,0.5,0.75,0.975)))#
+		params <- c(params,"phi")#
+		beta.sum <- rbind(beta.sum,phi.sum)#
+		truth <- c(truth,phi)#
+	}#
+	row.names(beta.sum) <- 1:nrow(beta.sum)#
+	tmp <- data.frame(i,model,data,threshold,phi,params,truth,beta.sum)#
+	names(tmp) <- c("iteration","model","data","threshold","phi","parameter","truth",#
+		"mean","q025","q25","q50","q75","q975")#
+	tmp#
+}#
+#######################################################################
+### Load MCMC algorithms#
+#######################################################################
+#
+source("~/git/Occupancy/static/occ.mcmc.R")  # standard single-season occupancy model#
+source("~/git/Occupancy/fp/occ.fp.marginal.lik.mcmc.R")  # false positive occupancy model #
+	# specified using a marginal likelihood#
+# source("~/git/Occupancy/fp/occ.fp.latent.var.mcmc.R")  # false positive occupancy model#
+	# # specified using latent indicator variables#
+source("analysis/simulation/occ.fp.unoccupied.only.mcmc.R")  # false positive occupancy model that#
+	# only accommodates false positives in the latent occupied state only#
+source('~/git/glm/binomial.logit.glm.mcmc.R')  # logistic regression
+n <- 100  # number of sample units#
+J <- 3  # number of replicates per sample unit#
+#
+# Coefficients for occupancy; average occupancy probability = 0.5#
+# psi.expected <- 0.5  # E[expit(X%*%beta)]#
+# beta0 <- -log(1/psi.expected-1)  # beta[1] - parameter for intercept#
+# beta0 <- 0#
+# beta <- matrix(c(beta0,1),2,1)  # coefficients for occupancy#
+	# # beta[2] can be anything because E[x[,2]]=0#
+#
+beta <- matrix(c(0,1),2,1)  # coefficients for occupancy#
+qX <- length(beta)#
+#
+# Coefficients for detection; average detection probability = 0.75#
+# p.expected <- 0.75  # E[expit(W%*%alpha)]#
+# alpha0 <- -log(1/(p.expected)-1)  # alpha[1] - parameter for intercept#
+# alpha0 <- -1#
+# alpha <- matrix(c(alpha0,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
+	# # alpha[2] can be anything because E[]W[,2]]=0#
+#
+alpha <- matrix(c(-0.5,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
+qW <- length(alpha)
+expit(-0.5)
+M <- 100  # number of experimental negative controls
+n.sim <- 1000  # number of simulations to perform per value of phi#
+n.mcmc <- 11000  # number of MCMC iterations to perform for each model
+priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
+	sigma.beta=1.6,sigma.alpha=1.6,a=1,b=1)#
+# hist(expit(rnorm(1000,0,1.6)))#
+#
+# Repository for simulation output#
+sim.out <- data.frame("iteration"=numeric(),"model"=character(),"data"=character(),#
+	"threshold"=character(),"phi"=numeric(),"parameter"=character(),"truth"=numeric(),#
+	"mean"=numeric(),"q025"=numeric(),"q25"=numeric(),"q50"=numeric(),"q75"=numeric(),#
+	"q975"=numeric())
+0.654*1000/60
+t.start <- Sys.time()
+X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
+		psi <- expit(X%*%beta)  # occupancy probability#
+		# hist(psi)#
+		summary(psi)#
+		# Heterogeneity in detection#
+		W <- array(1,dim=c(n,2,J))  # design matrix for detection#
+		for(j in 1:J){#
+			W[,2,j] <- rnorm(n)#
+		}#
+		p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
+		summary(p)
+alpha <- matrix(c(-0.5,0.5),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}
 p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
 summary(p)
-alpha
-W
-n <- 100  # number of individuals#
-J <- 20  # number of samples per individual
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability
-Q
-setwd("~/Documents/git/Occupancy/")#
+alpha <- matrix(c(-1,0.5),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}
+p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability
+summary(p)
+n.sim <- 1000  # number of simulations to perform per value of phi#
+n.mcmc <- 11000  # number of MCMC iterations to perform for each model#
+#
+priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
+	sigma.beta=1.6,sigma.alpha=1.6,a=1,b=1)#
+# hist(expit(rnorm(1000,0,1.6)))#
+#
+# Repository for simulation output#
+sim.out <- data.frame("iteration"=numeric(),"model"=character(),"data"=character(),#
+	"threshold"=character(),"phi"=numeric(),"parameter"=character(),"truth"=numeric(),#
+	"mean"=numeric(),"q025"=numeric(),"q25"=numeric(),"q50"=numeric(),"q75"=numeric(),#
+	"q975"=numeric())
+t.start <- Sys.time()#
+#
+# phi <- 0.05#
+for(phi in c(0.05,0.1)){  # probability of false positive#
+	for(i in 1:n.sim){#
+		cat("\n")#
+		print(i)#
+		cat("\n")#
+		####
+		### Simulate 'single-season' occupancy data#
+		####
+		# Heterogeneity in occupancy#
+		X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
+		psi <- expit(X%*%beta)  # occupancy probability#
+		# hist(psi)#
+		summary(psi)#
+		# Heterogeneity in detection#
+		W <- array(1,dim=c(n,2,J))  # design matrix for detection#
+		for(j in 1:J){#
+			W[,2,j] <- rnorm(n)#
+		}#
+		p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
+		summary(p)#
+		# hist(c(p))#
+		# State process and observations#
+		z <- rbinom(n,1,psi)  # simulated occupancy state#
+		Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations#
+		# Add false positives to dataset#
+		Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
+		Y.tilde <- Y+Q  # add false positives to data set#
+		Y.tilde[Y.tilde==2] <- 1#
+		# Simulate negative control dataset#
+		ctrl <- data.frame(v=rbinom(1,M,phi),M=M)#
+#
+		# Starting values#
+		start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  #
+		####
+		### Fit standard occupancy model to dataset without false positives#
+		####
+		tune <- list(beta=0.35,alpha=0.25)#
+		out1 <- occ.mcmc(Y,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model#
+		print(out1$keep)	#
+		out1$tune#
+		# Examine output#
+		# matplot(out1$beta,type="l",lty=1);abline(h=beta,col=1:qX)#
+		# matplot(out1$alpha,type="l",lty=1);abline(h=alpha,col=1:qW)#
+		# boxplot(out1$z.mean~z)  # true occupancy versus estimated occupancy#
+		# barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state#
+#
+		sim.out <- rbind(sim.out,sim.sum(out1,model="Occupancy",#
+			data="No false positives",threshold=NA,i,beta,alpha,N=sum(z),phi,burn=1000))#
+		####
+		### Fit standard occupancy model to dataset with false positives (ignore false positives)#
+		####
+		tune <- list(beta=0.3,alpha=0.2)#
+		out2 <- occ.mcmc(Y.tilde,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model#
+		print(out2$keep)#
+		out2$tune	#
+#
+		# Examine output#
+		# matplot(out2$beta,type="l",lty=1);abline(h=beta,col=1:qX)#
+		# matplot(out2$alpha,type="l",lty=1);abline(h=alpha,col=1:qW)#
+#
+		sim.out <- rbind(sim.out,sim.sum(out2,model="Occupancy",#
+			data="False positives",threshold=NA,i,beta,alpha,N=sum(z),phi,burn=1000))#
+		####
+		### Fit false-positive occupancy model (unoccupied state only) to dataset with false positives#
+		####
+#
+		tune <- list(beta=0.35,alpha=0.25)#
+		out3 <- occ.fp.unoccupied.only.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,#
+			n.mcmc,adapt=TRUE)  # fit model#
+		print(out3$keep)#
+		out3$tune#
+#
+		# Examine output#
+		# matplot(out3$beta,type="l",lty=1);abline(h=beta,col=1:qX)#
+		# matplot(out3$alpha,type="l",lty=1);abline(h=alpha,col=1:qW)#
+		# boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy#
+		# barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state#
+		# hist(out3$phi,breaks=100);abline(v=phi,lty=2,col=2)  # posterior for pi#
+#
+		sim.out <- rbind(sim.out,sim.sum(out3,model="False positive occupancy (unoccupied state only)",#
+			data="False positives",threshold=NA,i,beta,alpha,N=sum(z),phi,burn=1000))#
+		####
+		### Fit false-positive occupancy model to dataset with false positives#
+		####
+#
+		tune <- list(beta=0.35,alpha=0.3)			#
+		out4 <- occ.fp.marginal.lik.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRUE)  	#
+			# fit model#
+		print(out4$keep)		#
+		out4$tune#
+#
+		# Examine output#
+		# matplot(out4$beta,type="l",lty=1);abline(h=beta,col=1:qX)#
+		# matplot(out4$alpha,type="l",lty=1);abline(h=alpha,col=1:qW)#
+		# boxplot(out4$z.mean~z)  # true occupancy versus estimated occupancy#
+		# barplot(table(out4$N));sum(z)  # posterior of number in 'occupied' state#
+		# hist(out4$phi,breaks=100);abline(v=phi,lty=2,col=2)  # posterior for pi#
+		sim.out <- rbind(sim.out,sim.sum(out4,model="False positive occupancy",#
+			data="False positives",threshold=NA,i,beta,alpha,N=sum(z),phi,burn=1000))		#
+		####
+		### Fit logistic regression to thresholded false positive data set#
+		####
+		for(j in 1:J){  # loop through possible thresholds#
+			y.tmp <- ifelse(rowSums(Y.tilde)>=j,1,0)  # theshold response#
+			start.tmp <- list(beta=coef(glm(cbind(y.tmp,1-y.tmp) ~ 0+X, family=binomial("logit"))))#
+			tune <- list(beta=0.5)	#
+			out5 <- binomial.logit.glm.mcmc(y.tmp,1,X,priors,start,tune,n.mcmc,adapt=TRUE)  # fit model#
+			# print(out5$keep)#
+			out5$tune#
+			# Examine output#
+			# matplot(out5$beta,type="l",lty=1);abline(h=beta,col=1:qX)#
+			# abline(h=start.tmp$beta,col=3)#
+			# Summarize output#
+			sim.out <- rbind(sim.out,sim.sum(out5,model="Logistic",#
+				data="False positives",threshold=j,i,beta,alpha=NULL,N=FALSE,phi,burn=1000))		#
+		}#
+#
+		write.csv(sim.out,"analysis/simulation/sim.out.tmp.csv",row.names=FALSE)		#
+	}#
+}#
+#
+t.end <- Sys.time()#
+difftime(t.end,t.start,units="hours")
+warnings()
+bwplot(mean~paste(model,data,threshold)|parameter,#
+	data=sim.out[sim.out$parameter!="N"&sim.out$parameter!="phi"&sim.out$phi==0.1,],#
+	scales=list(y=list(relation="free",rot=0),x=list(rot=45)),ylab="E[Beta]",#
+	panel=function(x,y,...){#
+		panel.violin(x,y,col="lightgray",...)		#
+		panel.abline(h=c(alpha,beta)[panel.number()],lty=2,col=1)#
+})
+bwplot(mean~paste(model,data,threshold)|parameter,#
+	data=sim.out[sim.out$parameter!="N"&sim.out$parameter!="phi"&sim.out$phi==0.05,],#
+	scales=list(y=list(relation="free",rot=0),x=list(rot=45)),ylab="E[Beta]",#
+	panel=function(x,y,...){#
+		panel.violin(x,y,col="lightgray",...)		#
+		panel.abline(h=c(alpha,beta)[panel.number()],lty=2,col=1)#
+})
+sim.out$coverage <- sim.out$q025<sim.out$truth&sim.out$q975>sim.out$truth#
+coverage <- sim.out %>% group_by(model,data,threshold,phi,parameter) %>% #
+	summarise(coverage=sum(coverage)/n.sim)
+dotplot(paste(model,data,threshold)~coverage|parameter,groups=phi,data=coverage,#
+	panel=function(x,y,...){#
+		panel.abline(v=0.95,lty=2,col="lightgray")#
+		panel.dotplot(x,y,...)#
+	})
+sim.out
+source("manuscript/figures/split_violin.R")  # violin plot
+head(sim.out)#
+#
+# Subset data#
+sim.tmp <- sim.out[,1:8]#
+sim.tmp$threshold[is.na(sim.tmp$threshold)] <- 0#
+sim.tmp <- sim.tmp %>% filter(parameter%in%c("alpha0","alpha1","beta0","beta1"),#
+	data=="False positives",threshold%in%c(0,1,2))#
+sim.tmp$data <- factor(sim.tmp$data)  # drop unusued factor level#
+summary(sim.tmp)
+sim.tmp$mean <- sim.tmp$mean-sim.tmp$truth#
+#
+# Calculate y-limits for ploting#
+ylims <- range(sim.tmp$mean)+c(-1,1)*0.25#
+#
+# Convert data to wide format based on value of phi#
+sim.tmp <- spread(sim.tmp,phi,mean)#
+head(sim.tmp)
+violin.cols <- c("gray85","gray50")#
+#
+# Order in which to plot violins#
+plot.order <- data.frame(model=c("False positive occupancy",#
+	"False positive occupancy (unoccupied state only)","Occupancy","Logistic","Logistic"),#
+	data=rep("False positives",5),threshold=c(0,0,0,1,2))
+outer <- 0.025  # top and right margins#
+header <- 0.035 # header (i.e., strip) height#
+inner <- c(0.01,0.075)  # margin between top and bottom panels, margin between left and right columns#
+xlabs <- 0.14  # height of bottom figure region for x-axis labels#
+#
+violin.width <- (1-xlabs*2-outer)/8  # width available for each individual violin#
+violin.height <- (1-outer-header-xlabs-inner[1])/2  # height of violins#
+#
+nf <- layout(matrix(c(rep(0,5),#
+					c(0,1,0,4,0),#
+					c(0,2,0,5,0),#
+					rep(0,5),#
+					c(0,3,0,6,0),#
+					rep(0,5)),nrow=6,ncol=5,byrow=TRUE),#
+		widths=c(inner[2],violin.width*3,inner[2],violin.width*5,outer),#
+		heights=c(outer,header,violin.height,inner[1],violin.height,xlabs))#
+layout.show(nf)#
+####
+### Plot detection parameters#
+####
+#
+# Header#
+par(mar=c(0,0,0,0))#
+plot(1,pch="",axes=FALSE,xlab="",ylab="")#
+rect(par()$usr[1],par()$usr[3],par()$usr[2],par()$usr[4],col="gray85")#
+box()#
+#
+# Bias(alpha_0)#
+#
+plot(1,1,pch="",ylim=ylims,xlim=c(0.5,3.5),xaxt="n",las=1,xlab="",ylab="Bias")#
+abline(h=0,lty=2)#
+#
+mtext("Detection",side=3,line=0.25,cex=1)#
+mtext(expression(paste("Bias(",alpha[0],")")),side=2,line=2,cex=0.8)#
+#
+for(i in 1:3){#
+	tmp <- sim.tmp %>% dplyr::filter(model==plot.order[i,1],data==plot.order[i,2],#
+		threshold==plot.order[i,3],parameter=="alpha0")#
+	split_violin(x=i,y=tmp[,7:8],smooth=1,violin.col=violin.cols)	#
+}#
+# abline(v=1:5,col="lightgray")#
+#
+legend("topright",fill=violin.cols,bty="n",legend=expression(phi == 0.05,phi == 0.10))#
+# legend("topleft",bty="n",pch="",legend="a.)",adj=c(0.5,0.5))#
+#
+# Bias(alpha_1)#
+#
+plot(1,1,pch="",ylim=ylims,xlim=c(0.5,3.5),xaxt="n",las=1,xlab="",ylab="Bias")#
+axis(1,at=c(1:3),labels=FALSE)#
+abline(h=0,lty=2)#
+#
+mtext(expression(paste("Bias(",alpha[1],")")),side=2,line=2,cex=0.8)#
+#
+for(i in 1:3){#
+	tmp <- sim.tmp %>% dplyr::filter(model==plot.order[i,1],data==plot.order[i,2],#
+		threshold==plot.order[i,3],parameter=="alpha1")#
+	split_violin(x=i,y=tmp[,7:8],smooth=1,violin.col=violin.cols)	#
+}#
+#
+# Add x-axis labels#
+text(x=1:3,y=par("usr")[3]-0.4,labels=c("False positive\noccupancy\n(both states)","",#
+	"Classical\noccupany"),srt=45,xpd=NA,adj=1)#
+text(x=2,y=par("usr")[3]-0.4,labels="False positive\noccupancy           ",#
+	srt=45,xpd=NA,adj=1)#
+text(x=2,y=par("usr")[3]-0.4,labels=expression(paste("(",z[i]==0,")")),#
+	srt=45,xpd=NA,adj=c(1,1.25))#
+#
+# plot(1,1,pch="",ylim=c(0,1),xlim=c(0.5,5.5),axes=FALSE)#
+# axis(1,at=1:5,labels=FALSE)#
+# text(x=1:5,y=par("usr")[3]-0.01,labels=c("False positive\noccupancy","","Occupany",#
+	# "Logistic (q=1)","Logistic (q=2)"),srt=45,xpd=NA,adj=1)#
+# text(x=2,y=par("usr")[3]-0.01,labels="False positive\noccupancy            ",#
+	# srt=45,xpd=NA,adj=1)#
+# text(x=2,y=par("usr")[3]-0.01,labels=expression(paste("(",z[i]==0,")")),#
+	# srt=45,xpd=NA,adj=c(1,1.25))#
+####
+### Plot occupancy parameters#
+####
+#
+# Header#
+par(mar=c(0,0,0,0))#
+plot(1,pch="",axes=FALSE,xlab="",ylab="")#
+rect(par()$usr[1],par()$usr[3],par()$usr[2],par()$usr[4],col="gray85")#
+box()#
+#
+# Bias(beta_0)#
+#
+plot(1,1,pch="",ylim=ylims,xlim=c(0.5,5.5),xaxt="n",las=1,xlab="",ylab="Bias")#
+abline(h=0,lty=2)#
+#
+mtext("Occupancy",side=3,line=0.25,cex=1)#
+mtext(expression(paste("Bias(",beta[0],")")),side=2,line=2,cex=0.8)#
+#
+for(i in 1:5){#
+	tmp <- sim.tmp %>% dplyr::filter(model==plot.order[i,1],data==plot.order[i,2],#
+		threshold==plot.order[i,3],parameter=="beta0")#
+	split_violin(x=i,y=tmp[,7:8],smooth=1,violin.col=violin.cols)	#
+}#
+# abline(v=1:5,col="lightgray")#
+#
+# Bias(beta_1)#
+#
+plot(1,1,pch="",ylim=ylims,xlim=c(0.5,5.5),xaxt="n",las=1,xlab="",ylab="Bias")#
+axis(1,at=c(1:5),labels=FALSE)#
+abline(h=0,lty=2)#
+#
+mtext(expression(paste("Bias(",beta[1],")")),side=2,line=2,cex=0.8)#
+#
+for(i in 1:5){#
+	tmp <- sim.tmp %>% dplyr::filter(model==plot.order[i,1],data==plot.order[i,2],#
+		threshold==plot.order[i,3],parameter=="beta1")#
+	split_violin(x=i,y=tmp[,7:8],smooth=1,violin.col=violin.cols)	#
+}#
+#
+# Add x-axis labels#
+text(x=1:5,y=par("usr")[3]-0.4,labels=c("False positive\noccupancy\n(both states)",#
+	"","Classical\noccupany","Logistic regression\n(q=1)",#
+	"Logistic regression\n(q=2)"),srt=45,xpd=NA,adj=1)#
+# "False positive\noccupancy\n"#
+# text(x=2,y=par("usr")[3]-0.4,labels=expression(paste("(",z[i]==0,")")),#
+	# srt=45,xpd=NA,adj=c(1,2))#
+#
+text(x=2,y=par("usr")[3]-0.4,labels="False positive\noccupancy           ",#
+	srt=45,xpd=NA,adj=1)#
+text(x=2,y=par("usr")[3]-0.4,labels=expression(paste("(",z[i]==0,")")),#
+	srt=45,xpd=NA,adj=c(1,1.25))
 rm(list=ls())#
 #
-library(lattice)#
+library(gdata)#
+library(tidyverse)#
 #
-expit <- function(y){#
-	exp(y)/(1+exp(y)) #
-}
-n <- 100  # number of individuals#
-J <- 20  # number of samples per individual#
+setwd("~/Documents/projects/nfs_pup_survival")
+south <- read.csv("data/raw/SouthPups.csv")
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),4]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),4] <- NA
+south[south$AnimalID=="AN4687EW",4]
+south[south$AnimalID=="AN4687EW",4] <- "F"
+south[south$AnimalID=="AN3713EW",]
+south <- south[south$AnimalID!="AN3713EW",]
+south
+south[south$AnimalID%in%c("AN0992EW","AN3444EW","AN3713EW","AN3747EW"),5]
+south[south$AnimalID=="DSG1772W",5]
+head(south)
+south <- south[,-1]
+head(south)
+rm(list=ls())#
 #
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)
-z <- rbinom(n,1,psi)  # simulated occupancy state
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
-Y
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out1$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-boxplot(out1$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out2$beta,2,mean)  # posterior means for beta
-barplot(table(out2$N));sum(z)  # posterior of number in 'occupied' state
-boxplot(out2$z.mean~z)  # true occupancy versus estimated occupancy
-source("fp/occ.fp.latent.var.mcmc.R")
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-source("fp/occ.fp.latent.var.mcmc.R")
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit
-boxplot(out3$Q.mean~Q)  $ true false positives versus estimated false positives
-boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
-out3
-out3$Q.mean
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out1$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-n <- 100  # number of individuals#
-J <- 5  # number of samples per individual#
+library(gdata)#
+library(tidyverse)#
 #
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)#
+setwd("~/Documents/projects/nfs_pup_survival")
+south <- read.csv("data/raw/SouthPups.csv")
+head(south)
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),]
+south <- read.csv("data/raw/SouthPups.csv")
+south <- south[,-1]
+head(south)
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),south$Sex]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),]
+south$Sex[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW")]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),6] <- NA  # Sex not recorded
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),
+]
+south[south$AnimalID=="AN4687EW",]
+south[south$AnimalID=="AN4687EW",6]
+south[south$AnimalID=="AN4687EW",6] <- "F"
+south[south$AnimalID=="AN3713EW",]
+south <- south[south$AnimalID!="AN3713EW",]
+south[south$AnimalID%in%c("AN0992EW","AN3444EW","AN3713EW","AN3747EW"),]
+sum(south$AnimalID=="AN3713EW")
+south[south$AnimalID=="DSG1772W",]
+rm(list=ls())#
 #
-# Heterogeneity in detection#
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)#
-# summary(p[W[,3,1]==1,1])#
+library(gdata)#
+library(tidyverse)#
 #
-# State process and observations#
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
-hist(out3$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
-boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
-out3$Q.mean
-tail(out3$Q.mean,10)
-tail(out3$z,10)
-tail(out3$Q.mean,10)
-tail(z,10)
-tail(p,10)
-tail(Y)
-tail(Y,10)
-tail(Y.tilde,10)
-tail(out3$Q.mean,10)
-tail(p,10)
-tail(z,10)
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,10000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
-hist(out3$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
-boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-n <- 100  # number of individuals#
-J <- 3  # number of samples per individual#
+setwd("~/Documents/projects/nfs_pup_survival")
+south <- read.csv("data/raw/SouthPups.csv")
+south <- south[,-1]
+head(south)
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),6]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),6]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),6] <- NA  # Sex not recorded
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),6]
+south[south$AnimalID%in%c("DSG0867W","AN1927EW","AN5093EW"),]
+south[south$AnimalID=="AN4687EW",6]
+south[south$AnimalID%in%c("AN0992EW","AN3444EW","AN3713EW","AN3747EW"),7]
+south[south$AnimalID%in%c("AN0992EW","AN3444EW","AN3713EW","AN3747EW"),]
+south[south$AnimalID=="DSG1772W",7]
+summary(south)
+names(south)[grep("TagAge",names(south))]
+names(south)[grep("IsDalton4YearsOld",names(south))]
+setwd("~/Documents/git/Occupancy/")#
 #
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)#
-#
-# Heterogeneity in detection#
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)#
-# summary(p[W[,3,1]==1,1])#
-#
-# State process and observations#
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out1$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out1$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-matplot(out2$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out3$beta,2,mean)  # posterior means for beta
-boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
-boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
-barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
-boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-n <- 30  # number of individuals#
-J <- 3  # number of samples per individual#
-#
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)#
-# summary(p[W[,3,1]==1,1])
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out1$beta,2,quantile,c(0.025,0.975))
+rm(list=ls())
+setwd("~/git/Occupancy/")
+rm(list=ls())
+n <- 20  # total number of species in community#
+R <- 30  # total number of sites#
+J <- rpois(R,40)  # number of surveys conducted  at each site#
+hist(J)
+X <- matrix(cbind(1,rnorm(R)),R,2)  # site-level covariates
+qX <- ncol(X)
+beta <- matrix(c(rnorm(n,-0.5,0.5),rnorm(n,1,0.5)),2,n)  # coefficients unique to species
+psi <- sapply(1:R,function(x) pnorm(X[x,]%*%beta))
+hist(psi[,])
+psi
+X
+qW <- 1#
+alpha <- matrix(rnorm(n,0.5,1.5),1,n)  # coefficients unique to species
+p <- pnorm(alpha)
+hist(p)
+z <- apply(psi,2,function(x) rbinom(n,1,x))
 z
-n <- 50  # number of individuals#
-J <- 3  # number of samples per individual#
-#
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)#
-# summary(p[W[,3,1]==1,1])#
-#
-# State process and observations#
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations#
-#
-# Add false positives to dataset#
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-n <- 100  # number of individuals#
-J <- 20  # number of samples per individual#
-#
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)#
-#
-# Heterogeneity in detection#
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations#
-#
-# Add false positives to dataset#
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-n <- 100  # number of individuals#
-J <- 30  # number of samples per individual#
-#
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)#
-#
-# Heterogeneity in detection#
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)#
-# summary(p[W[,3,1]==1,1])#
-#
-# State process and observations#
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations#
-#
-# Add false positives to dataset#
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
-apply(out1$alpha,2,quantile,c(0.025,0.975))
-apply(out2$alpha,2,quantile,c(0.025,0.975))
-apply(out3$alpha,2,quantile,c(0.025,0.975))
-n <- 100  # number of individuals#
-J <- 8  # number of samples per individual#
-#
-# Heterogeneity in occupancy#
-X <- matrix(cbind(1,rnorm(n)),n,2)  # design matrix for occupancy#
-qX <- ncol(X)#
-beta <- matrix(c(0,1.5),2,1)  # coefficients for occupancy#
-psi <- expit(X%*%beta)  # occupancy probability#
-hist(psi)#
-#
-# Heterogeneity in detection#
-W <- array(1,dim=c(n,2,J))  # design matrix for detection#
-qW <- dim(W)[2]#
-for(i in 1:J){#
-	W[,2,i] <- rnorm(n)#
-	# W[,3,i] <- sample(c(0,1),n,prob=c(0.7,0.3),replace=TRUE)#
-}#
-alpha <- matrix(c(1,1),2,1)  # coefficients for detection; unbiased beta p\in{0.02,0.9}#
-# alpha <- matrix(c(0,0.5),2,1)  # coefficients for detection#
-# alpha <- matrix(c(-1,1),2,1)  # coefficients for detection#
-# alpha <- matrix(c(0,0.5,5),3,1)  # coefficients for detection#
-p <- apply(W,3,function(x) expit(x%*%alpha))  # detection probability#
-summary(p)#
-# summary(p[W[,3,1]==1,1])#
-#
-# State process and observations#
-z <- rbinom(n,1,psi)  # simulated occupancy state#
-Y <- sapply(1:J,function(x) rbinom(n,1,z*p[,x]))  # simulated observations
-phi <- 0.09  # probability of false positive#
-Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables#
-Y.tilde <- Y+Q  # add false positives to data set#
-Y.tilde[Y.tilde==2] <- 1
-source("static/occ.mcmc.R")#
-start <- list(beta=beta,alpha=alpha)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out1 <- occ.mcmc(Y,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-source("fp/occ.fp.marginal.lik.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)
-source("fp/occ.fp.latent.var.mcmc.R")#
-start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values#
-priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters#
-	sigma.beta=10,sigma.alpha=10)#
-tune <- list(beta=0.35,alpha=0.1)#
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
-matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
-matplot(out3$alpha,type="l");abline(h=alpha,col=1:2,lty=2)  # posterior for alpha
-apply(out1$beta,2,quantile,c(0.025,0.975))
-apply(out2$beta,2,quantile,c(0.025,0.975))
-apply(out3$beta,2,quantile,c(0.025,0.975))
+Y <- sapply(1:R,function(x) rbinom(n,J[x],p*z[,x]))#
+idx <- 10#
+round(cbind(psi=psi[,idx],z=z[,idx],p=c(p),fo=Y[,idx]/J[idx]),2)
+source("community/occ.community.mcmc.R")
+priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),sigma.beta=1.5,sigma.alpha=1.5,a=1,b=1)#
+start <- list(beta=beta,alpha=alpha,z=z)#
+tune <- list(alpha=0.1)
+out1 <- occ.community.mcmc(Y,J,W=NULL,X,priors,start,tune,n.mcmc=10000,adapt=TRUE)
+out1$tune
+idx <- 2
+matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
+matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
+idx <- 1
+matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
+matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
+idx <- 4
+matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
+matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
+idx <- 6
+matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
+matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
+idx <- 7
+matplot(t(out1$beta[idx,,]),type="l");abline(h=beta[,idx],col=1:2,lty=2)
+matplot(out1$alpha[idx,,],type="l");abline(h=alpha[idx],col=1:2,lty=2)
