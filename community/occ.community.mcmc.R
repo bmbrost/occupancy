@@ -56,7 +56,6 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	qX <- ncol(X)
 	qW <- ncol(W)
 	v <- matrix(0,n,R)
-	u <- numeric(n)
 
 	
 	###
@@ -65,8 +64,7 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		
 	Sigma.mu.alpha <- diag(qW)*priors$sigma.mu.alpha^2
 	Sigma.mu.alpha.inv <- solve(Sigma.mu.alpha)
-	sigma.mu.beta <- priors$sigma.mu.beta
-	Sigma.mu.beta <- diag(qX)*sigma.mu.beta^2
+	Sigma.mu.beta <- diag(qX)*priors$sigma.mu.beta^2
 	Sigma.mu.beta.inv <- solve(Sigma.mu.beta)	
 
 	
@@ -125,30 +123,22 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 			tune$alpha <- get.tune(tune$alpha,keep.tmp$alpha,k)
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 	
-	   	
-	   			
-		###
-		###  Sample v (auxilliary variable for z) 
-		###
-# browser()
-		for(i in 1:R){
-			# i <- 1
-			z0 <- z[,i]==0
-			z1 <- z[,i]==1
-			v[z0,i] <- truncnormsamp(matrix(X[i,],,qX)%*%beta[,z0],1,-Inf,0,sum(z0))
-			v[z1,i] <- truncnormsamp(matrix(X[i,],,qX)%*%beta[,z1],1,0,Inf,sum(z1))
-		}
-
-		# library(msm)	
-		# v[z1] <- rtnorm(sum(z1),(X%*%beta)[z1],lower=0)
-		# v[z0] <- rtnorm(sum(z0),(X%*%beta)[z0],upper=0)		
-
-
-		A <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta
+# browser()	   		   			
 		alpha.star <- rnorm(n,alpha,tune$alpha)  # proposals for alpha_i
 		p.star <- expit(alpha.star)  # proposals for p_i
-		
+		A <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta
+
 		for (i in 1:n){  # loop through species
+# i <- 1
+			###
+			###  Sample v (auxilliary variable for z) 
+			###
+			
+			z0 <- z[i,]==0
+			z1 <- z[i,]==1
+			v[i,z0] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta[,i],1,-Inf,0,sum(z0))
+			v[i,z1] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta[,i],1,0,Inf,sum(z1))
+				
 
 			###
 	  		###  Sample alpha_i and updata p_i
