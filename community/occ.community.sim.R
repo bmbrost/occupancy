@@ -1,8 +1,8 @@
 ###
-### Code to simulate community occupancy data with optional
-### correlated detection and occurrence probabilities, and to fit  
-### the uncorrelated and correlated models. See Royle and Dorazio (2008)
-### and Dorazio et al. (2011) for further details.
+### Code to simulate community occupancy data with optional correlated 
+### detection and occurrence probabilities. Also includes code to fit the
+### corresponding uncorrelated and correlated models. See Royle 
+### and Dorazio (2008) and Dorazio et al. (2011) for further details.
 ###
 
 setwd("~/git/Occupancy/")
@@ -40,6 +40,8 @@ hist(J)
 ###
 ### Simulate detection and occupancy coefficients
 ###
+
+# Note: detection varies by species, occupancy varies by site and species
 
 # Mean, standard deviation, and correlation of detection and occupancy coefficients
 mu.alpha <- -0.5  # mean of detection intercept
@@ -125,7 +127,7 @@ out1$keep
 ### Examine output
 ###
 
-idx <- 100
+idx <- 37
 dev.new()
 matplot(out1$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
 matplot(out1$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
@@ -135,8 +137,8 @@ abline(h=rowMeans(beta),col=3:4,lty=2)
 plot(out1$mu.alpha,type="l");abline(h=mu.alpha,col=1,lty=2)
 abline(h=mean(alpha),col=3,lty=2)
 
-hist(out1$sigma.beta);abline(v=sigma.beta,lty=2,col=2);abline(v=apply(beta,1,var),col=3,lty=2)
-hist(out1$sigma.alpha);abline(v=sigma.alpha,lty=2,col=2);abline(v=apply(alpha,1,var),col=3,lty=2)
+hist(out1$sigma.beta);abline(v=sigma.beta,lty=2,col=2);abline(v=apply(beta,1,sd),col=3,lty=2)
+hist(out1$sigma.alpha);abline(v=sigma.alpha,lty=2,col=2);abline(v=apply(alpha,1,sd),col=3,lty=2)
 
 boxplot(out1$z.mean~z)
 out1$z.mean[z==0]
@@ -165,7 +167,7 @@ out2$keep
 ### Examine output
 ###
 
-idx <- 38
+idx <- 35
 matplot(out2$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
 matplot(out2$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
 
