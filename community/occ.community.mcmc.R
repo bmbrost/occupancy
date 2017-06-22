@@ -1,14 +1,19 @@
-occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	#
-	#  	Brian Brost (11 JUN 2014)
+	#  	Brian Brost (20 JUN 2017)
 	#	
-	#	Fully heterogeneous occupany model using auxilliary variables
+	#	Community occupancy model with independent detection and occupancy intercepts
 	#
-	#  	Y: n x J matrix containing full detection history
-	# 	W: covariates for detection probability (p)
-	#  	X: covariates for occupancy probability (psi)
-	#
+	#  	Y: 
+	#	J:
+	# 	W: 
+	#  	X: 
+	#	priors:
+	#	start:
+	#	tune:
+	#	n.mcmc:
+	#	adapt:
 	#
 	
 	
@@ -41,7 +46,6 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
 	}
 
-	
 
 	###
 	###  Create Variables 
@@ -50,58 +54,56 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 	n <- nrow(Y)
 	R <- ncol(Y)
 	qX <- ncol(X)
-	qW <- ifelse(is.null(W),1,ncol(W))
-	# J <- apply(Y,1,function(x) sum(!is.na(x)))
-	# y <- apply(Y,1,sum,na.rm=TRUE)
-	# z <- ifelse(y>0,1,0)	
-	# Y.long <- c(Y)
-	# W.long <- apply(W,2,I)
+	qW <- ncol(W)
 	v <- matrix(0,n,R)
 	u <- numeric(n)
 
-	# v <- numeric(n)
-	# u <- numeric(n*dim(W)[3])	
 	
 	###
 	###  Priors
 	###
-	
-	mu.beta <- matrix(priors$mu.beta,qX,1)	
-	mu.alpha <- matrix(priors$mu.alpha,qW,1)	
-	sigma.beta <- priors$sigma.beta
-	sigma.alpha <- priors$sigma.alpha
+		
+	Sigma.mu.alpha <- diag(qW)*priors$sigma.mu.alpha^2
+	Sigma.mu.alpha.inv <- solve(Sigma.mu.alpha)
+	sigma.mu.beta <- priors$sigma.mu.beta
+	Sigma.mu.beta <- diag(qX)*sigma.mu.beta^2
+	Sigma.mu.beta.inv <- solve(Sigma.mu.beta)	
 
-	Sigma.beta <- diag(qX)*sigma.beta^2
-	Sigma.alpha <- diag(qW)*sigma.alpha^2	
-	Sigma.beta.inv <- solve(Sigma.beta)	
-	Sigma.alpha.inv <- solve(Sigma.alpha)	
-	
 	
 	###
 	###  Starting Values 
 	###
 
-	beta <- start$beta
 	alpha <- start$alpha
+	beta <- start$beta
+	mu.alpha <- matrix(start$mu.alpha,qW,1)	
+	mu.beta <- matrix(start$mu.beta,qX,1)		
 	p <- expit(alpha)
 	z <- start$z
+	
+	Sigma.beta <- diag(qX)*start$sigma.beta^2
+	Sigma.beta.inv <- solve(Sigma.beta)	
+	
+	sigma.alpha <- start$sigma.alpha
+	Sigma.alpha <- diag(qW)*sigma.alpha^2	
+	Sigma.alpha.inv <- solve(Sigma.alpha)
 	
 	
 	###
 	###  Create receptacles for output
 	###
 
-	beta.save <- array(0,c(n,qX,n.mcmc))
-	alpha.save <- array(0,c(n,qW,n.mcmc))	
+	
+	alpha.save <- array(0,c(n.mcmc,qW,n))
+	beta.save <- array(0,c(n.mcmc,qX,n))
 	z.mean <- matrix(0,n,R)
-	N.save <- numeric(R)
+	mu.alpha.save <- numeric(n.mcmc)
+	mu.beta.save <- matrix(0,n.mcmc,qX)
+	sigma.alpha.save <- numeric(n.mcmc)
+	sigma.beta.save <- numeric(n.mcmc)
+	N.save <- matrix(0,n.mcmc,R)
 
-	# beta.save <- matrix(0,n.mcmc,qX)
-	# alpha.save <- matrix(0,n.mcmc,qW)
-	# z.mean <- numeric(n)
-	# N.save <- numeric(n.mcmc)
-
-	keep <- list(beta=0,alpha=0)
+	keep <- list(alpha=0)
 	keep.tmp <- keep
 	Tb <- 50  # frequency of adaptive tuning
 
@@ -111,9 +113,7 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 	###
 	
 	for(k in 1:n.mcmc){
-		if(k%%1000==0) cat(k," "); flush.console()
-
-# browser()		
+		if(k%%1000==0) cat(k," "); flush.console()		
 
 		###
 		### Adaptive tuning
@@ -122,7 +122,6 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 		if(adapt==TRUE & k%%Tb==0) {  # Adaptive tuning
 			keep.tmp <- lapply(keep.tmp,function(x) x/Tb)
 			keep.tmp$alpha <- keep.tmp$alpha/n
-			# tune$beta <- get.tune(tune$beta,keep.tmp$beta,k)
 			tune$alpha <- get.tune(tune$alpha,keep.tmp$alpha,k)
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 	
@@ -131,10 +130,7 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 		###
 		###  Sample v (auxilliary variable for z) 
 		###
-
-		# z0 <- z==0
-		# z1 <- z==1
-
+# browser()
 		for(i in 1:R){
 			# i <- 1
 			z0 <- z[,i]==0
@@ -143,110 +139,114 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 			v[z1,i] <- truncnormsamp(matrix(X[i,],,qX)%*%beta[,z1],1,0,Inf,sum(z1))
 		}
 
-		# v[z1] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta,1,0,Inf,sum(z1))
-		# v[z0] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta,1,-Inf,0,sum(z0))
-
 		# library(msm)	
 		# v[z1] <- rtnorm(sum(z1),(X%*%beta)[z1],lower=0)
 		# v[z0] <- rtnorm(sum(z0),(X%*%beta)[z0],upper=0)		
 
 
-		###
-		###  Sample psi
-		###
-
-# browser()	
-		for (i in 1:n){
-			A <- solve(t(X)%*%X+Sigma.beta.inv)
-			b <- t(X)%*%v[i,]+Sigma.beta.inv%*%mu.beta			
-			beta[,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-			psi[i,] <- pnorm(X%*%beta[,i])
-		}
-
-		# A <- solve(t(X)%*%X+solve(Sigma.beta))
-		# b <- t(X)%*%v+solve(Sigma.beta)%*%mu.beta
-		# beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-		# # beta <- t(rmvnorm(1,A%*%b,A))
-		# psi <- pnorm(X%*%beta)
+		A <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta
+		alpha.star <- rnorm(n,alpha,tune$alpha)  # proposals for alpha_i
+		p.star <- expit(alpha.star)  # proposals for p_i
 		
-		
-		###
-	  	###  Sample p (alpha)
-	  	###
+		for (i in 1:n){  # loop through species
+
+			###
+	  		###  Sample alpha_i and updata p_i
+		  	###
 # browser()
-		alpha.star <- rnorm(n,alpha,tune$alpha)
-		p.star <- expit(alpha.star)
-
-		for(i in 1:n){
-			# i <- 7
 			z1 <- z[i,]==1	
-			# mean(Y[i,z1]/J[z1])
 		 	mh.star <- sum(dbinom(Y[i,z1],J[z1],p.star[i],log=TRUE))+
-		 		sum(dnorm(alpha.star[i],mu.alpha,sigma.alpha,log=TRUE))
+				dnorm(alpha.star[i],mu.alpha,sigma.alpha,log=TRUE)
 		 	mh.0 <- sum(dbinom(Y[i,z1],J[z1],p[i],log=TRUE))+
-		 		sum(dnorm(alpha[i],mu.alpha,sigma.alpha,log=TRUE))
+		 		dnorm(alpha[i],mu.alpha,sigma.alpha,log=TRUE)
 			if(exp(mh.star-mh.0) > runif(1)){
 				alpha[i] <- alpha.star[i]
 				p[i] <- p.star[i]
 				keep$alpha <- keep$alpha+1
 				keep.tmp$alpha <- keep.tmp$alpha+1
 		  	}			
-		}
-		
-		# z1 <- z==1	
-	  	# alpha.star <- rnorm(qW,alpha,tune$alpha)
-	  	# p.star <- apply(W,3,function(x) expit(x%*%alpha.star))	 	
-	 	# mh.star <- sum(dbinom(Y[z1,],1,p.star[z1,],log=TRUE))+
-	 		# sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
-	 	# mh.0 <- sum(dbinom(Y[z1,],1,p[z1,],log=TRUE))+
-	 		# sum(dnorm(alpha,mu.alpha,sigma.alpha,log=TRUE))
-		# if(exp(mh.star-mh.0) > runif(1)){
-			# alpha <- alpha.star
-			# p <- p.star
-			# keep$alpha <- keep$alpha+1
-			# keep.tmp$alpha <- keep.tmp$alpha+1
-	  	# }
-				
-		###
-		###  Sample u (auxilliary variable for p) 
-		###
-		
-		# idx1 <- which(Y.long==1&z1)
-		# idx0 <- which(Y.long==0&z1)	
-		# u[idx1] <- truncnormsamp((matrix(W.long[idx1,],,qW)%*%alpha),1,0,Inf,length(idx1))	
-		# u[idx0] <- truncnormsamp((matrix(W.long[idx0,],,qW)%*%alpha),1,-Inf,0,length(idx0))
+	
+	
+			###
+			###  Sample beta_i and update psi_i
+			###
+# browser()	
+			b <- t(X)%*%v[i,]+Sigma.beta.inv%*%mu.beta			
+			beta[,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
+			psi[i,] <- pnorm(X%*%beta[,i])
+	
+	
+			###
+			###  Sample z 
+			###
+# browser()			
+			idx <- Y[i,]==0
+			p1 <- psi[i,]*p[i]^Y[i,]*(1-p[i])^(J-Y[i,])
+			p0 <- 1-psi[i,]
+			psi.tmp <- p1/(p1+p0)
+			z[i,idx] <- rbinom(sum(idx),1,psi.tmp[idx])					
 
+		}  # end loop through species
 		
+
 		###
-		###  Sample p 
+		###  Sample mu.alpha
 		###
 
-		# u.tmp <- u[z1]
-		# W.tmp <- W.long[z1,]		
-		# A <- solve(t(W.tmp)%*%W.tmp+solve(Sigma.alpha))
-		# b <- u.tmp%*%W.tmp+t(mu.alpha)%*%solve(Sigma.alpha)
-		# alpha <- A%*%t(b)+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
-		# p <- matrix(apply(W.long,1,function(x) pnorm(x%*%alpha)),,max(J))
+		A.inv <- solve(n*Sigma.alpha.inv+Sigma.mu.alpha.inv)
+		b <- Sigma.alpha.inv%*%sum(alpha)
+	    mu.alpha <- A.inv%*%b+t(chol(A.inv))%*%matrix(rnorm(qW),qW,1)
+	    # mu.alpha <- rnorm(1,A.inv*b,A.inv)
 
-		
+
 		###
-		###  Sample z 
+		###  Sample mu.beta
 		###
-		
-		# p.tmp <- apply(1-p,1,prod)
-		# num.tmp <- psi*p.tmp
-		# psi.tmp <- num.tmp/(num.tmp+(1-psi))
-		# z[y==0] <- rbinom(sum(y==0),1,psi.tmp[y==0])
-		
+
+		A.inv <- solve(n*Sigma.beta.inv+Sigma.mu.beta.inv)
+		b <- Sigma.beta.inv%*%rowSums(beta)
+	    mu.beta <- A.inv%*%b+t(chol(A.inv))%*%matrix(rnorm(qX),qX,1)
+		# mu.beta <- t(rmvnorm(1,A.inv%*%b,A.inv))
+
+
+		###
+		###  Sample sigma.alpha
+		###
+# browser()		
+		tmp <- sum(apply(alpha,2,function(x) x-mu.alpha)^2)
+		r.tmp <- 1/(tmp/2+1/priors$r)
+		q.tmp <- n/2+priors$q
+		sigma.alpha <- 1/rgamma(1,q.tmp,,r.tmp)
+		Sigma.alpha <- diag(qW)*sigma.alpha
+		Sigma.alpha.inv <- solve(Sigma.alpha)
+		sigma.alpha <- sqrt(sigma.alpha)
+
+
+		###
+		###  Sample sigma.beta 
+		###	
+# browser()
+		tmp <- sum(apply(beta,2,function(x) x-mu.beta)^2)
+		r.tmp <- 1/(tmp/2+1/priors$r)
+		q.tmp <- (qX*n)/2+priors$q
+		sigma.beta <- 1/rgamma(1,q.tmp,,r.tmp)
+		Sigma.beta <- diag(qX)*sigma.beta
+		Sigma.beta.inv <- solve(Sigma.beta)				
+		sigma.beta <- sqrt(sigma.beta)
+
 		
 		###
 		###  Save samples 
 		###
-# k <- 1
-		beta.save[,,k] <- t(beta)
-		alpha.save[,,k] <- alpha
+
+		alpha.save[k,,] <- alpha
+		beta.save[k,,] <- beta
 		z.mean <- z.mean+z/n.mcmc
-		# N.save[k] <- sum(z)
+		mu.alpha.save[k] <- mu.alpha
+		mu.beta.save[k,] <- mu.beta
+		sigma.beta.save[k] <- sigma.beta
+		sigma.alpha.save[k] <- sigma.alpha
+		N.save[k,] <- colSums(z)
 	
 		}
 	cat("\n")
@@ -257,523 +257,11 @@ occ.community.mcmc <- function(Y,J,W=NULL,X,priors,start,tune,n.mcmc,adapt=TRUE)
 	
 	keep$alpha <- keep$alpha/n
 	keep <- lapply(keep,function(x) x/n.mcmc)
-	end <- list(beta=beta,alpha=alpha,z=z)  # starting values
+	end <- list(alpha=alpha,beta=beta,z=z,mu.alpha=mu.alpha,mu.beta=mu.beta,
+		sigma.alpha=sigma.alpha,sigma.beta=sigma.beta)  # ending values
 
-	list(beta=beta.save,alpha=alpha.save,N=N.save,z.mean=z.mean,
-	Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
+	list(alpha=alpha.save,beta=beta.save,z.mean=z.mean,mu.alpha=mu.alpha.save,mu.beta=mu.beta.save,
+		sigma.alpha=sigma.alpha.save,sigma.beta=sigma.beta.save,N=N.save,keep=keep,
+		Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc,adapt=adapt)
 }
 
-
-
-
-
-# occ.probit.1.mcmc <- function(Y,W,X,n.mcmc){
-
-	# #
-	# #  	Brian Brost (11 JUN 2014)
-	# #	
-	# #	Fully heterogeneous occupany model using auxilliary variables
-	# #
-	# #  	Y: n x J matrix containing full detection history
-	# # 	W: covariates for detection probability (p)
-	# #  	X: covariates for occupancy probability (psi)
-	# #
-	# #
-	
-	# ####
-	# ####  Libraries and Subroutines
-	# ####
-	
-	# library(mvtnorm)
-	
-	# expit <- function(logit){
-		 # exp(logit)/(1+exp(logit)) 
-	# }
-
-	# logit <- function(expit){
-		# log(expit/(1-expit))
-	# }
-	
-	# truncnormsamp <- function(mu,sig2,low,high,nsamp){
-		# flow <- pnorm(low,mu,sqrt(sig2)) 
-		# fhigh <- pnorm(high,mu,sqrt(sig2)) 
-		# u <- runif(nsamp) 
-		# tmp <- flow+u*(fhigh-flow)
-		# x <- qnorm(tmp,mu,sqrt(sig2))
-		# x
-	# }
-	
-	# ####
-	# ####  Create Variables 
-	# ####
-# # browser()
-	# n <- nrow(Y)
-	# qX <- ncol(X)
-	# qW <- ncol(W)
-	# beta.save <- matrix(0,n.mcmc,qX)
-	# alpha.save <- matrix(0,n.mcmc,qW)
-	# z.mean <- numeric(n)
-	# N.save <- numeric(n.mcmc)
-	# v <- numeric(n)
-	# # u <- matrix(0,n,dim(W)[3])	
-	# y <- apply(Y,1,sum,na.rm=TRUE)
-	# u <- numeric(n*dim(W)[3])	
-	# J <- apply(Y,1,function(x) sum(!is.na(x)))
-	
-	# ####
-	# ####  Priors and Starting Values 
-	# ####
-	
-	# beta.mn <- matrix(0,qX,1)
-	# alpha.mn <- matrix(0,qW,1)
-	# beta.var <- diag(qX)*10
-	# alpha.var <- diag(qW)*10
-	# z <- ifelse(y>0,1,0)
-
-# # browser()
-	# beta <- as.vector(glm(z ~ 0+X,family=binomial())$coefficients)
-	# alpha <- as.vector(glm(cbind(y[y>0],J[y>0]-y[y>0]) ~ 
-		# 0+W[y>0,,1],family=binomial())$coefficients)
-
-# Y <- c(Y)
-# W <- apply(W,2,I)
-
-	
-	# ####
-	# ####  Begin MCMC Loop 
-	# ####
-	
-	# for(k in 1:n.mcmc){
-		# if(k%%100==0) cat(k," "); flush.console()
-		
-		# ####
-		# ####  Sample v (auxilliary variable for z) 
-		# ####
-# # browser()		
-		# z0 <- z==0
-		# z1 <- z==1
-		# v[z1] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta,1,0,Inf,sum(z1))
-		# v[z0] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta,1,-Inf,0,sum(z0))
-
-		# # v[z1] <- truncnormsamp(X[z1,]%*%beta,1,0,Inf,sum(z1))
-		# # v[z0] <- truncnormsamp(X[z0,]%*%beta,1,-Inf,0,sum(z0))
-
-		# # library(msm)	
-		# # v[z1] <- rtnorm(sum(z1),(X%*%beta)[z1],lower=0)
-		# # v[z0] <- rtnorm(sum(z0),(X%*%beta)[z0],upper=0)		
-
-
-		# ####
-		# ####  Sample psi (beta) 
-		# ####
-# # browser()				
-		# A <- solve(t(X)%*%X+solve(beta.var))
-		# b <- t(X)%*%v+solve(beta.var)%*%beta.mn
-		# beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-		# # beta <- t(rmvnorm(1,A%*%b,A))
-		# psi <- pnorm(X%*%beta)
-		
-				
-		# ####
-		# ####  Sample u (auxilliary variable for p) 
-		# ####
-# # browser()		
-		
-		# idx1 <- which(Y==1&z1)
-		# idx0 <- which(Y==0&z1)	
-		# u[idx1] <- truncnormsamp((matrix(W[idx1,],,qW)%*%alpha),1,0,Inf,length(idx1))			
-		# u[idx0] <- truncnormsamp((matrix(W[idx0,],,qW)%*%alpha),1,-Inf,0,length(idx0))
-
-		# # u[idx1] <- truncnormsamp((W[idx1,]%*%alpha),1,0,Inf,length(idx1))			
-		# # u[idx0] <- truncnormsamp((W[idx0,]%*%alpha),1,-Inf,0,length(idx0))
-		
-		# # for(i in 1:ncol(Y)){
-			# # # i <- 1
-			# # y1 <- Y[,i]==1&z1		
-			# # y0 <- Y[,i]==0&z1		
-			# # u[y1,i] <- truncnormsamp((W[y1,,i]%*%alpha),1,0,Inf,sum(y1))
-			# # u[y0,i] <- truncnormsamp((W[y0,,i]%*%alpha),1,-Inf,0,sum(y0))
-		# # }
-	
-		# ####
-		# ####  Sample p (alpha) 
-		# ####
-# # browser()	
-
-		# # u.tmp <- c(u[z1,])
-		# # W.tmp <- apply(W[z1,,],2,I)		
-		# # A <- solve(t(W.tmp)%*%W.tmp+solve(alpha.var))
-		# # b <- t(W.tmp)%*%u.tmp+solve(alpha.var)%*%alpha.mn
-		# # alpha <- A%*%b+t(chol(A))%*%matrix(rnorm(qW),qW,1)
-		# # # beta <- t(rmvnorm(1,A%*%b,A))
-		# # p <- pnorm(W[,,1]%*%alpha)
-	
-		# u.tmp <- u[z1]
-		# W.tmp <- W[z1,]		
-		# A <- solve(t(W.tmp)%*%W.tmp+solve(alpha.var))
-		# b <- u.tmp%*%W.tmp+t(alpha.mn)%*%solve(alpha.var)
-		# alpha <- A%*%t(b)+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
-		# p <- matrix(apply(W,1,function(x) pnorm(x%*%alpha)),,max(J))
-
-		# ####
-		# ####  Sample z 
-		# ####
-		
-		# p.tmp <- apply(1-p,1,prod)
-		# # p.tmp <- 1-p
-		# num.tmp <- psi*p.tmp#^J 
-		# psi.tmp <- num.tmp/(num.tmp+(1-psi))
-		# z[y==0] <- rbinom(sum(y==0),1,psi.tmp[y==0])
-		
-		# ####
-		# ####  Save Samples 
-		# ####
-		
-		# beta.save[k,] <- beta
-		# alpha.save[k,] <- alpha
-		# z.mean <- z.mean+z/n.mcmc
-		# N.save[k] <- sum(z)
-	
-		# }
-	# cat("\n")
-	
-	# ####
-	# ####  Write Output 
-	# ####
-	
-	# list(beta.save=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,n.mcmc=n.mcmc)
-	
-# }
-
-
-
-
-
-
-# occ.mcmc <- function(Y,J,W,X,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
-
-	# #
-	# #  Mevin Hooten (20111031), Last Updated: 20131029
-	# #
-	# #  W: covariates for detection probability (p)
-	# #  X: covariates for occupancy probability (psi)
-	# #
-	# #
-	
-	# ####
-	# ####  Libraries and Subroutines
-	# ####
-	
-	# library(mvtnorm)
-	
-	# expit <- function(logit){
-		 # exp(logit)/(1+exp(logit)) 
-	# }
-
-	# logit <- function(expit){
-		# log(expit/(1-expit))
-	# }
-	
-	# truncnormsamp <- function(mu,sig2,low,high,nsamp){
-		# flow <- pnorm(low,mu,sqrt(sig2)) 
-		# fhigh <- pnorm(high,mu,sqrt(sig2)) 
-		# u <- runif(nsamp) 
-		# tmp <- flow+u*(fhigh-flow)
-		# x <- qnorm(tmp,mu,sqrt(sig2))
-		# x
-	# }
-	
-	# ####
-	# ####  Create Variables 
-	# ####
-# # browser()
-	# n <- nrow(Y)
-	# qX <- ncol(X)
-	# qW <- ncol(W)
-	# beta.save <- matrix(0,n.mcmc,qX)
-	# alpha.save <- matrix(0,n.mcmc,qW)
-	# z.mean <- numeric(n)
-	# N.save <- numeric(n.mcmc)
-	# v <- numeric(n)
-	# u <- matrix(0,n,dim(W)[3])	
-	# y <- apply(Y,1,sum)
-	
-	
-	# ####
-	# ####  Priors and Starting Values 
-	# ####
-	
-	# beta.mn <- matrix(0,qX,1)
-	# alpha.mn <- matrix(0,qW,1)
-	# beta.var <- diag(qX)*10
-	# alpha.var <- diag(qW)*10
-# # alpha.var <- rep(10,qW)
-	# z <- ifelse(y>0,1,0)
-
-# # browser()
-	# beta <- as.vector(glm(z ~ 0+X,family=binomial())$coefficients)
-	# if(is.null(beta.tune)){beta.tune <- 0.1*abs(beta)}
-	
-	# alpha <- as.vector(glm(cbind(y[y>0],J[y>0]-y[y>0]) ~ 
-		# 0+W[y>0,,1],family=binomial())$coefficients)
-	# if(is.null(alpha.tune)){alpha.tune <- 0.1*abs(alpha)}
-	
-	# ####
-	# ####  Begin MCMC Loop 
-	# ####
-	
-	# for(k in 1:n.mcmc){
-		# if(k%%1000==0) cat(k," "); flush.console()
-		
-		# ####
-		# ####  Sample v (auxilliary variable for z) 
-		# ####
-# # browser()		
-		# z0 <- z==0
-		# z1 <- z==1
-		# v[z1] <- truncnormsamp(X[z1,]%*%beta,1,0,Inf,sum(z1))
-		# v[z0] <- truncnormsamp(X[z0,]%*%beta,1,-Inf,0,sum(z0))
-
-		# # library(msm)	
-		# # v[z1] <- rtnorm(sum(z1),(X%*%beta)[z1],lower=0)
-		# # v[z0] <- rtnorm(sum(z0),(X%*%beta)[z0],upper=0)		
-
-
-		# ####
-		# ####  Sample psi (beta) 
-		# ####
-# # browser()				
-		# A <- solve(t(X)%*%X+solve(beta.var))
-		# b <- t(X)%*%v+solve(beta.var)%*%beta.mn
-		# beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-		# # beta <- t(rmvnorm(1,A%*%b,A))
-		# psi <- pnorm(X%*%beta)
-		
-				
-		# ####
-		# ####  Sample u (auxilliary variable for p) 
-		# ####
-# # browser()		
-		# # y0 <- y==0&z==1
-		# # y1 <- y>0&z==1
-		# # u[y1] <- truncnormsamp(W[y1,,1]%*%alpha,1,0,Inf,sum(y1))
-		# # u[y0] <- truncnormsamp(W[y0,,1]%*%alpha,1,-Inf,0,sum(y0))		
-		
-		# for(i in 1:ncol(Y)){
-			# # i <- 1
-			# y1 <- Y[,i]==1&z1		
-			# y0 <- Y[,i]==0&z1		
-			# u[y1,i] <- truncnormsamp((W[y1,,i]%*%alpha),1,0,Inf,sum(y1))
-			# u[y0,i] <- truncnormsamp((W[y0,,i]%*%alpha),1,-Inf,0,sum(y0))
-		# }
-	
-		# ####
-		# ####  Sample p (alpha) 
-		# ####
-# # browser()	
-
-		# # u.tmp <- c(u[z1,])
-		# # W.tmp <- apply(W[z1,,],2,I)		
-		# # A <- solve(t(W.tmp)%*%W.tmp+solve(alpha.var))
-		# # b <- t(W.tmp)%*%u.tmp+solve(alpha.var)%*%alpha.mn
-		# # alpha <- A%*%b+t(chol(A))%*%matrix(rnorm(qW),qW,1)
-		# # # beta <- t(rmvnorm(1,A%*%b,A))
-		# # p <- pnorm(W[,,1]%*%alpha)
-	
-		# u.tmp <- c(u[z1,])
-		# W.tmp <- apply(W[z1,,],2,I)		
-		# A <- solve(t(W.tmp)%*%W.tmp+solve(alpha.var))
-		# b <- u.tmp%*%W.tmp+t(alpha.mn)%*%solve(alpha.var)
-		# alpha <- A%*%t(b)+t(chol(A))%*%matrix(rnorm(qW),qW,1)		
-		# p <- apply(W,3,function(x) pnorm(x%*%alpha))
-	
-	
-		# ####
-		# ####  Sample z 
-		# ####
-		
-		# p.tmp <- apply(1-p,1,prod)
-		# # p.tmp <- 1-p
-		# num.tmp <- psi*p.tmp^J 
-		# psi.tmp <- num.tmp/(num.tmp+(1-psi))
-		# z[y==0] <- rbinom(sum(y==0),1,psi.tmp[y==0])
-		
-		# ####
-		# ####  Save Samples 
-		# ####
-		
-		# beta.save[k,] <- beta
-		# alpha.save[k,] <- alpha
-		# z.mean <- z.mean+z/n.mcmc
-		# N.save[k] <- sum(z)
-	
-		# }
-	# cat("\n")
-	
-	# ####
-	# ####  Write Output 
-	# ####
-	
-	# list(beta.save=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,n.mcmc=n.mcmc)
-	
-# }
-
-
-
-
-
-# occ.mcmc <- function(y,J,W,X,n.mcmc,alpha.tune=NULL,beta.tune=NULL){
-
-	# #
-	# #  Mevin Hooten (20111031), Last Updated: 20131029
-	# #
-	# #  W: covariates for detection probability (p)
-	# #  X: covariates for occupancy probability (psi)
-	# #
-	# #
-	
-	# ####
-	# ####  Libraries and Subroutines
-	# ####
-	
-	# library(mvtnorm)
-	
-	# expit <- function(logit){
-		 # exp(logit)/(1+exp(logit)) 
-	# }
-
-	# logit <- function(expit){
-		# log(expit/(1-expit))
-	# }
-	
-	# truncnormsamp <- function(mu,sig2,low,high,nsamp){
-		# flow <- pnorm(low,mu,sqrt(sig2)) 
-		# fhigh <- pnorm(high,mu,sqrt(sig2)) 
-		# u <- runif(nsamp) 
-		# tmp <- flow+u*(fhigh-flow)
-		# x <- qnorm(tmp,mu,sqrt(sig2))
-		# x
-	# }
-	
-	# ####
-	# ####  Create Variables 
-	# ####
-	
-	# n <- nrow(y)
-	# qX <- ncol(X)
-	# qW <- ncol(W)
-	# beta.save <- matrix(0,n.mcmc,qX)
-	# alpha.save <- matrix(0,n.mcmc,qW)
-	# z.mean <- numeric(n)
-	# N.save <- numeric(n.mcmc)
-	# v <- numeric(n)
-	# u <- matrix(0,n,J)	
-	# y.idot <- apply(y,1,sum)
-	
-	
-	# ####
-	# ####  Priors and Starting Values 
-	# ####
-	
-	# beta.mn <- matrix(0,qX,1)
-	# alpha.mn <- rep(0,qW)
-	# beta.var <- diag(qX)*10
-	# alpha.var <- diag(qW)*10
-# alpha.var <- rep(10,qW)
-	# z <- ifelse(y.idot>0,1,0)
-	
-# # browser()
-	# beta <- as.vector(glm(z ~ 0+X,family=binomial())$coefficients)
-	# if(is.null(beta.tune)){beta.tune <- 0.1*abs(beta)}
-	
-	# alpha <- as.vector(glm(cbind(y.idot[y.idot>1],J[y.idot>1]-y.idot[y.idot>1]) ~ 
-		# 0+W[y.idot>1,],family=binomial())$coefficients)
-	# if(is.null(alpha.tune)){alpha.tune <- 0.1*abs(alpha)}
-	
-	# ####
-	# ####  Begin MCMC Loop 
-	# ####
-	
-	# for(k in 1:n.mcmc){
-		# if(k%%1000==0) cat(k," "); flush.console()
-		
-		# ####
-		# ####  Sample v (auxilliary variable for z) 
-		# ####
-# # browser()		
-		# z0 <- z==0
-		# z1 <- z==1
-		# v[z1] <- truncnormsamp((X%*%beta)[z1],1,0,Inf,sum(z1))
-		# v[z0] <- truncnormsamp((X%*%beta)[z0],1,-Inf,0,sum(z0))
-
-		# # library(msm)	
-		# # v[z1] <- rtnorm(sum(z1),(X%*%beta)[z1],lower=0)
-		# # v[z0] <- rtnorm(sum(z0),(X%*%beta)[z0],upper=0)		
-
-
-		# ####
-		# ####  Sample psi (beta) 
-		# ####
-# # browser()				
-		# A <- solve(t(X)%*%X+solve(beta.var))
-		# b <- t(X)%*%v+solve(beta.var)%*%beta.mn
-		# beta <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-		# # beta <- t(rmvnorm(1,A%*%b,A))
-		# psi <- pnorm(X%*%beta)
-		
-		# # beta.star <- rnorm(qX,beta,beta.tune)
-		# # mh1 <- sum(dbinom(z,1,expit(X%*%beta.star),log=TRUE)) +
-			# # sum(dnorm(beta.star,beta.mn,sqrt(beta.var),log=TRUE))
-		# # mh2 <- sum(dbinom(z,1,expit(X%*%beta),log=TRUE)) +
-			# # sum(dnorm(beta,beta.mn,sqrt(beta.var),log=TRUE))
-		# # if(exp(mh1-mh2) > runif(1)){
-			# # beta <- beta.star
-		# # }
-		# # psi <- expit(X%*%beta)
-		
-
-		# ####
-		# ####  Sample p (alpha) 
-		# ####
-	
-		
-		
-	
-	
-		# alpha.star <- rnorm(qW,alpha,alpha.tune)
-		# mh1 <- sum(dbinom(y.idot[z==1],J[z==1],expit(W[z==1,]%*%alpha.star),log=TRUE)) +
-			# sum(dnorm(alpha.star,alpha.mn,sqrt(alpha.var),log=TRUE))
-		# mh2 <- sum(dbinom(y.idot[z==1],J[z==1],expit(W[z==1,]%*%alpha),log=TRUE)) +
-			# sum(dnorm(alpha,alpha.mn,sqrt(alpha.var),log=TRUE))
-		# if(exp(mh1-mh2) > runif(1)){
-			# alpha <- alpha.star
-		# }
-		# p <- expit(W%*%alpha)
-		 
-		# ####
-		# ####  Sample z 
-		# ####
-		
-		# num.tmp <- psi*(1-p)^J 
-		# psi.tmp <- num.tmp/(num.tmp+(1-psi))
-		# z[y.idot==0] <- rbinom(sum(y.idot==0),1,psi.tmp[y.idot==0])
-		
-		# ####
-		# ####  Save Samples 
-		# ####
-		
-		# beta.save[k,] <- beta
-		# alpha.save[k,] <- alpha
-		# z.mean <- z.mean+z/n.mcmc
-		# N.save[k] <- sum(z)
-	
-		# }
-	# cat("\n")
-	
-	# ####
-	# ####  Write Output 
-	# ####
-	
-	# list(beta.save=beta.save,alpha.save=alpha.save,N.save=N.save,z.mean=z.mean,n.mcmc=n.mcmc)
-	
-# }
