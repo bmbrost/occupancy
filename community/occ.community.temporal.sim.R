@@ -35,7 +35,7 @@ logit <- function(expit){
 n <- 15  # total number of species in community
 R <- 45  # total number of sites
 T <- 10  # number of primary sampling periods (i.e., years over which sites are surveyed)
-J <- matrix(rpois(R*T,40),R,T)  # number of surveys conducted  at each site and sampling period
+J <- matrix(rpois(R*T,10),R,T)  # number of surveys conducted  at each site and sampling period
 hist(J)
 
 
@@ -46,9 +46,9 @@ hist(J)
 # Note: detection varies by species, occupancy varies by site and species
 
 # Mean, standard deviation, and correlation of detection and occupancy coefficients
-mu.alpha <- -0.5  # mean of detection intercept
+mu.alpha <- -1  # mean of detection intercept
 mu.beta <- c(0.5,1)  # mean of occupancy coefficients
-sigma.alpha <- 0.75  # standard deviation of species-level detection intercept
+sigma.alpha <- 1  # standard deviation of species-level detection intercept
 sigma.beta <- 0.5  # standard deviation of species-level occupancy coefficients
 # rho <- 0  # uncorrelated intercepts
 rho <- 0.5  # correlation between intercepts
@@ -59,8 +59,10 @@ Sigma[1,2] <- Sigma[2,1] <- Sigma[1,1]*Sigma[2,2]*rho  # covariance of intercept
 
 # Simulated coefficients
 theta <- rmvnorm(n,c(mu.alpha,mu.beta),Sigma)  # alpha_0, beta_0, and beta_1
-alpha <- matrix(theta[,1],1,n)  # alpha_0
-beta <- matrix(theta[,2:3],2,n)  # beta_0 and beta_1
+alpha <- matrix(theta[,1],1,n,byrow=TRUE)  # alpha_0
+beta <- matrix(theta[,2:3],2,n,byrow=TRUE)  # beta_0 and beta_1
+apply(alpha,1,mean)
+apply(beta,1,mean)
 
 
 ###
@@ -75,17 +77,26 @@ hist(p)
 
 
 ###
+### Missing data for site x sampling period combinations
+###
+
+idx <- sample(1:(T*R),50)
+idx <- ifelse(1:(T*R)%in%idx,NA,1)
+
+
+###
 ### Occupancy design matrix and coefficients
 ###
 
 # Occupancy varies by site, species, and primary sampling period
 X <- array(1,c(R,2,T))  # Occupancy covariates by site (rows) and sampling periods (third dimension)
-X[,2,] <- scale(rnorm(R*T,rep(seq(0,1,length.out=T),each=R)))
+X[,1,] <- X[,1,]*idx
+X[,2,] <- scale(rnorm(R*T,rep(seq(0,1,length.out=T),each=R)))*idx
 plot(1:length(X[,2,]),X[,2,])
 qX <- ncol(X)  # number of covariates
 psi <- apply(X,c(1,3),function(x) pnorm(x%*%beta))  # occupancy prob. by species, site, and sampling period
 
-plot(psi[,20,2],pnorm(X[20,,2]%*%beta))  # check occupancy probabilities
+plot(psi[,4,2],pnorm(X[4,,2]%*%beta))  # check occupancy probabilities
 hist(psi[,,])
 
 
@@ -118,7 +129,7 @@ for(i in 1:T){  # calculate frequency of occurrence
 fo <- apply(fo,3,rowMeans,na.rm=TRUE)
 plot(rep(p,T),fo);abline(a=0,b=1,lty=2)
 
-site.idx <- 1  # site indicator
+site.idx <- 2  # site indicator
 sample.idx <- 3  # sampling period indicator
 round(cbind(psi=psi[,site.idx,sample.idx],z=z[,site.idx,sample.idx],p=c(p),
 	fo=Y[,site.idx,sample.idx]/J[site.idx,sample.idx]),2)
@@ -147,7 +158,7 @@ out3$keep
 ### Examine output
 ###
 
-idx <- 15
+idx <- 6
 matplot(out3$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
 matplot(out3$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
 
@@ -166,7 +177,10 @@ abline(v=sd(beta[-1,]),col=3,lty=2)
 
 boxplot(out3$z.mean~z)
 out3$z.mean[z==0]
+out3$z.mean[z==1]
 
-plot(1:T,apply(out3$z.mean,3,mean))
+plot(p,apply(out3$z.mean,1,mean,na.rm=TRUE))
+
+plot(1:T,apply(out3$z.mean,3,mean,na.rm=TRUE))
 
 
