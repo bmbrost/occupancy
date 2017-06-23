@@ -57,8 +57,10 @@ Sigma[1,2] <- Sigma[2,1] <- Sigma[1,1]*Sigma[2,2]*rho  # covariance of intercept
 
 # Simulated coefficients
 theta <- rmvnorm(n,c(mu.alpha,mu.beta),Sigma)  # alpha_0, beta_0, and beta_1
-alpha <- matrix(theta[,1],1,n)  # alpha_0
-beta <- matrix(theta[,2:3],2,n)  # beta_0 and beta_1
+alpha <- matrix(theta[,1],1,n,byrow=TRUE)  # alpha_0
+beta <- matrix(theta[,2:3],2,n,byrow=TRUE)  # beta_0 and beta_1
+apply(alpha,1,mean)
+apply(beta,1,mean)
 
 
 ###

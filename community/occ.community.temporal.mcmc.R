@@ -58,8 +58,9 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 	qX <- ncol(X)
 	qW <- ncol(W)
 	X.tilde <- apply(X,2,I)  # stack X over primary sampling periods for easy matrix multiply
-	v <- array(0,c(n,R,T))
-
+	na.idx <- !is.na(X.tilde[,2])
+	v <- array(NA,c(n,R,T))
+	
 	
 	###
 	###  Priors
@@ -128,7 +129,8 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 		
 # browser()	
-		A <- solve(t(X.tilde[,-1])%*%X.tilde[,-1]+Sigma.beta.inv)  # for update of beta		
+
+		A <- solve(t(X.tilde[na.idx,-1])%*%X.tilde[na.idx,-1]+Sigma.beta.inv)  # for update of beta		
 		alpha.star <- alpha
 		alpha.star[1,] <- rnorm(n,alpha[1,],tune$alpha)  # proposals for alpha_0
 		beta.star <- beta
@@ -140,9 +142,12 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 			###
 			###  Sample v (auxilliary variable for z) 
 			###
-
+# browser()
 			z0 <- z[i,,]==0
 			z1 <- z[i,,]==1
+			idx <- is.na(z0)
+			z0[idx] <- FALSE
+			z1[idx] <- FALSE
 			v[i,,][z0] <- truncnormsamp(X.tilde[z0,]%*%beta[,i],1,-Inf,0,sum(z0))
 			v[i,,][z1] <- truncnormsamp(X.tilde[z1,]%*%beta[,i],1,0,Inf,sum(z1))
 
@@ -151,7 +156,6 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 	  		###  Sample alpha_0 and updata p_i
 		  	###
 # browser()
-			z1 <- z[i,,]==1
 		 	mh.star <- sum(dbinom(Y[i,,][z1],J[z1],p.star[i],log=TRUE))+
 				dmvnorm(c(alpha.star[1,i],beta[1,i]),mu.0,Sigma,log=TRUE)
 		 	mh.0 <- sum(dbinom(Y[i,,][z1],J[z1],p[i],log=TRUE))+
@@ -167,10 +171,11 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 			###
 			### Sample beta_0
 			###
-# browser()					
-			mh.star <- sum(dnorm(v[i,,],X.tilde%*%beta.star[,i],1,log=TRUE))+
+# browser()			
+# sum(dnorm(v[i,,][na.idx],X.tilde[na.idx,]%*%beta.star[,i],1,log=TRUE))
+			mh.star <- sum(dnorm(v[i,,],X.tilde%*%beta.star[,i],1,log=TRUE),na.rm=TRUE)+
 				dmvnorm(c(alpha[1,i],beta.star[1,i]),mu.0,Sigma,log=TRUE)
-			mh.0 <- sum(dnorm(v[i,,],X.tilde%*%beta[,i],1,log=TRUE))+
+			mh.0 <- sum(dnorm(v[i,,],X.tilde%*%beta[,i],1,log=TRUE),na.rm=TRUE)+
 				dmvnorm(c(alpha[1,i],beta[1,i]),mu.0,Sigma,log=TRUE)
 			if(exp(mh.star-mh.0) > runif(1)){
 				beta[1,i] <- beta.star[1,i]
@@ -183,9 +188,9 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 			###  Sample beta_i and update psi_i
 			###
 # browser()	
-			b <- t(X.tilde[,-1])%*%c(v[i,,]-beta[1,i])+Sigma.beta.inv%*%mu.beta[-1,1]			
+			b <- t(X.tilde[na.idx,-1])%*%c(v[i,,][na.idx]-beta[1,i])+Sigma.beta.inv%*%mu.beta[-1,1]			
 			beta[-1,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX-1),qX-1,1)
-			psi[i,,] <- pnorm(X.tilde%*%beta[,i])			
+			psi[i,,][na.idx] <- pnorm(X.tilde[na.idx,]%*%beta[,i])			
 
 	
 			###
@@ -193,6 +198,7 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 			###
 # browser()			
 			idx <- Y[i,,]==0
+			idx[is.na(idx)] <- FALSE
 			p1 <- psi[i,,]*p[i]^Y[i,,]*(1-p[i])^(J-Y[i,,])
 			p0 <- 1-psi[i,,]
 			psi.tmp <- p1/(p1+p0)
@@ -202,7 +208,7 @@ occ.community.temporal.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=T
 		
 
 		###
-		###  Sample mu.0
+		###  Sample mu.0 (alpha_0 and beta_0)
 		###
 # browser()
 		beta.sum <- rowSums(beta)
