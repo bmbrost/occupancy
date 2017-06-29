@@ -11,6 +11,7 @@ rm(list=ls())
 # options(error=stop)
 
 library(mvtnorm)
+library(lattice)
 
 expit <- function(logit){
 		exp(logit)/(1+exp(logit)) 
@@ -76,7 +77,6 @@ qX <- ncol(X)  # number of covariates
 
 # Occupancy probability by unit, sampling period, and species (columns)
 psi <- t(apply(X,1,function(x) pnorm(x%*%beta)))
-# plot(psi[2,],pnorm(X[2,]%*%beta))  # check occupancy probabilities
 # hist(psi)
 
 # Occupancy latent state
@@ -132,7 +132,7 @@ out1$keep
 ### Examine output
 ###
 
-idx <- 8
+idx <- 1
 matplot(out1$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
 matplot(out1$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
 
@@ -144,6 +144,14 @@ hist(out1$sigma.alpha);abline(v=sigma.alpha,lty=2,col=2);abline(v=sd(alpha),col=
 
 boxplot(out1$z.mean~z)
 out1$z.mean[z==0]
+
+# Diversity by sampling period
+diversity <- data.frame(richness=c(out1$richness),hill0=c(out1$hill0),hill1=c(out1$hill1),
+	hill2=c(out1$hill2),time=rep(1:T,each=R*out1$n.mcmc))
+bwplot(time~richness,data=diversity)  # richness based on latent occurence state (z)
+bwplot(time~hill0,data=diversity)  # richness based on Hill numbers (q=0)
+bwplot(time~hill1,data=diversity)  # Shannon diversity based on Hill numbers (q=1)
+bwplot(time~hill2,data=diversity)  # Simpson diversity based on Hill numbers (q=2)
 
 
 #########################################################################
@@ -169,7 +177,7 @@ out2$keep
 ### Examine output
 ###
 
-idx <- 11
+idx <- 5
 matplot(out2$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
 matplot(out2$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
 
@@ -183,8 +191,16 @@ hist(out2$Sigma[1,2,],breaks=50);abline(v=Sigma[1,2],lty=2,col=2);abline(v=cov(a
 hist(out2$sigma.beta);abline(v=sigma.beta,lty=2,col=2);abline(v=sd(beta[-1,]),col=3,lty=2)
 
 boxplot(out2$z.mean~z)
-out2$z.mean[z==0]
-out2$z.mean[z==1]
+hist(out2$z.mean[z==0])
+hist(out2$z.mean[z==1])
+
+# Diversity by sampling period
+diversity <- data.frame(richness=c(out2$richness),hill0=c(out2$hill0),hill1=c(out2$hill1),
+	hill2=c(out2$hill2),time=rep(1:T,each=R*out2$n.mcmc))
+bwplot(time~richness,data=diversity)  # richness based on latent occurence state (z)
+bwplot(time~hill0,data=diversity)  # richness based on Hill numbers (q=0)
+bwplot(time~hill1,data=diversity)  # Shannon diversity based on Hill numbers (q=1)
+bwplot(time~hill2,data=diversity)  # Simpson diversity based on Hill numbers (q=2)
 
 
 
