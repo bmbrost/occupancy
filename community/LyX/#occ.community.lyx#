@@ -122,7 +122,7 @@
 
 \series medium
 \color black
-Community Occupancy Model with Correlated Occupancy and Detection
+Basic Community Occupancy Model
 \begin_inset VSpace -0.175in
 \end_inset
 
@@ -153,7 +153,7 @@ height "0.5pt"
 Brian M.
  Brost / 28 June 2017 / Vetted: 
 \color red
-YES
+NO
 \end_layout
 
 \begin_layout Section
@@ -162,7 +162,7 @@ Description
 
 \begin_layout Standard
 An occupancy model for multiple species where the detection and occupancy
- processes within a species are potentially correlated.
+ processes within a species are assumed independent.
 \end_layout
 
 \begin_layout Section
@@ -170,12 +170,12 @@ Implementation
 \end_layout
 
 \begin_layout Standard
-The file occ.community.correlated.sim.R simulates data according to the model
- statement below, and 
+The file occ.community.sim.R simulates data according to the model statement
+ below, and 
 \begin_inset Newline newline
 \end_inset
 
-occ.community.correlated.mcmc.R contains the MCMC algorithm for parameter estimation.
+occ.community.mcmc.R contains the MCMC algorithm for parameter estimation.
 \end_layout
 
 \begin_layout Section
@@ -233,24 +233,12 @@ z_{ijt} & \sim & \begin{cases}
 0, & v_{ijt}\le1\\
 1, & v_{ijt}>0
 \end{cases}\\
-v_{ijt} & \sim & {\cal N}\left(\beta_{0i}+\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
-p_{ijt} & = & \text{logit}^{-1}\left(\alpha_{0i}+\mathbf{w}_{jt}^{\prime}\boldsymbol{\alpha}_{i}\right)\\
-\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right) & \sim & {\cal N}\left(\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right)\\
+v_{ijt} & \sim & {\cal N}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
+p_{ijt} & = & \text{logit}^{-1}\left(\mathbf{w}_{jt}^{\prime}\boldsymbol{\alpha}_{i}\right)\\
 \boldsymbol{\beta}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
 \boldsymbol{\alpha}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right)\\
-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right) & \sim & {\cal N}\left(\mathbf{0},\sigma_{0}^{2}\mathbf{I}\right)\\
 \boldsymbol{\mu}_{\beta} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)\\
 \boldsymbol{\mu}_{\alpha} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\alpha}}^{2}\mathbf{I}\right)\\
-\boldsymbol{\Sigma}^{-1} & \sim & \text{Wish}\left(S_{0}^{-1},\nu\right)\\
 \sigma_{\beta}^{2} & \sim & \text{IG}\left(r,q\right)\\
 \sigma_{\alpha}^{2} & \sim & \text{IG}\left(r,q\right)
 \end{eqnarray*}
@@ -312,86 +300,17 @@ Occupancy state auxiliary variable (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[v_{ijt}\mid\cdot\right] & \propto & \left[z_{ijt}\mid v_{ijt}\right]\left[v_{ijt}\mid\beta_{0i},\boldsymbol{\beta}_{i}\right]\\
- & \propto & \left(1_{\left\{ z_{ijt}=0\right\} }1_{\left\{ v_{ijt}\le0\right\} }+1_{\left\{ z_{ijt}=1\right\} }1_{\left\{ v_{ijt}>0\right\} }\right)\times{\cal N}\left(v_{ijt}\mid\beta_{0i}+\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
+\left[v_{ijt}\mid\cdot\right] & \propto & \left[z_{ijt}\mid v_{ijt}\right]\left[v_{ijt}\mid\boldsymbol{\beta}_{i}\right]\\
+ & \propto & \left(1_{\left\{ z_{ijt}=0\right\} }1_{\left\{ v_{ijt}\le0\right\} }+1_{\left\{ z_{ijt}=1\right\} }1_{\left\{ v_{ijt}>0\right\} }\right)\times{\cal N}\left(v_{ijt}\mid\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
  & = & \begin{cases}
-{\cal TN}\left(\beta_{0i}+\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{-\infty}^{0}, & z_{ijt}=0\\
-{\cal TN}\left(\beta_{0i}+\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{0}^{\infty}, & z_{ijt}=1
+{\cal TN}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{-\infty}^{0}, & z_{ijt}=0\\
+{\cal TN}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{0}^{\infty}, & z_{ijt}=1
 \end{cases}
 \end{eqnarray*}
 
 \end_inset
 
 
-\end_layout
-
-\begin_layout Subsection
-Detection and occupancy intercepts (
-\begin_inset Formula $\alpha_{0i},\beta_{0i}$
-\end_inset
-
-)
-\end_layout
-
-\begin_layout Standard
-\noindent
-\begin_inset Formula 
-\begin{eqnarray*}
-\left[\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\cdot\right] & \propto & \prod_{j=1}^{R}\prod_{t=1}^{T_{j}}\left[y_{ijt}\mid p_{ijt},z_{ijt}\right]\left[v_{ijt}\mid\beta_{0i},\boldsymbol{\beta}_{i}\right]\left[\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right]\\
- & \propto & \prod_{j=1}^{R}\prod_{t=1}^{T_{j}}\text{Binom}\left(y_{ijt}\mid J_{jt},p_{ijt}\right)^{z_{ijt}}{\cal N}\left(v_{ijt}\mid\beta_{0i}+\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right){\cal N}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right).
-\end{eqnarray*}
-
-\end_inset
-
-The updates for 
-\begin_inset Formula $\alpha_{0i}$
-\end_inset
-
- and 
-\begin_inset Formula $\beta_{0i}$
-\end_inset
-
- proceed separately using Metropolis-Hastings.
- When updating 
-\begin_inset Formula $\alpha_{0i}$
-\end_inset
-
-, note that the product over 
-\begin_inset Formula $j$
-\end_inset
-
- and 
-\begin_inset Formula $t$
-\end_inset
-
- only includes instances of 
-\begin_inset Formula $j$
-\end_inset
-
- and 
-\begin_inset Formula $t$
-\end_inset
-
- such that 
-\begin_inset Formula $z_{ijt}=1$
-\end_inset
-
-.
 \end_layout
 
 \begin_layout Subsection
@@ -406,12 +325,11 @@ Occupancy coefficients (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[\boldsymbol{\beta}_{i}\mid\cdot\right] & \propto & \left[\mathbf{v}_{i}\mid\beta_{0i},\boldsymbol{\beta}_{i}\right]\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\right]\\
- & \propto & {\cal N}\left(\mathbf{v}_{i}\mid\beta_{0i}+\mathbf{X}\boldsymbol{\beta}_{i},\mathbf{1}\right){\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
- & \propto & \exp\left\{ -\frac{1}{2}\left(\mathbf{v}_{i}-\left(\beta_{0i}+\mathbf{X}\boldsymbol{\beta}_{i}\right)\right)^{\prime}\left(\mathbf{v}_{i}-\left(\beta_{0i}+\mathbf{X}\boldsymbol{\beta}_{i}\right)\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(\left(\mathbf{v}_{i}-\beta_{0i}\right)-\mathbf{X}\boldsymbol{\beta}_{i}\right)^{\prime}\left(\left(\mathbf{v}_{i}-\beta_{0i}\right)-\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\mathbf{v}_{i}-\beta_{0i}\right)^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\mathbf{X}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(-2\left(\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\boldsymbol{\beta}_{i}\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\left(\mathbf{v}_{i}-\beta_{0i}\right)^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\mathbf{X}^{\prime}\mathbf{X}+\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}\right)\right\} \\
+\left[\boldsymbol{\beta}_{i}\mid\cdot\right] & \propto & \left[\mathbf{v}_{i}\mid\boldsymbol{\beta}_{i}\right]\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\right]\\
+ & \propto & {\cal N}\left(\mathbf{v}_{i}\mid\mathbf{X}\boldsymbol{\beta}_{i},\mathbf{1}\right){\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(\mathbf{v}_{i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)^{\prime}\left(\mathbf{v}_{i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\mathbf{v}_{i}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\mathbf{X}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(-2\left(\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\boldsymbol{\beta}_{i}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\mathbf{v}_{i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\mathbf{X}^{\prime}\mathbf{X}+\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}\right)\right\} \\
  & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
 \end{eqnarray*}
 
@@ -422,7 +340,7 @@ where
 \end_inset
 
 , 
-\begin_inset Formula $\mathbf{b}^{\prime}=\left(\mathbf{v}_{i}-\beta_{0i}\right)^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
+\begin_inset Formula $\mathbf{b}^{\prime}=\mathbf{v}_{i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
 \end_inset
 
 , 
@@ -484,127 +402,6 @@ The update for
 \end_layout
 
 \begin_layout Subsection
-Mean of occupancy and detection intercepts (
-\begin_inset Formula $\mu_{\beta_{0}},\mu_{\alpha_{0}}$
-\end_inset
-
-)
-\end_layout
-
-\begin_layout Standard
-\begin_inset Formula 
-\begin{eqnarray*}
-\left[\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right]\left[\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right]\\
- & \propto & \prod_{i=1}^{n}{\cal N}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right){\cal N}\left(\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\mid\mathbf{0},\sigma_{0}^{2}\mathbf{I}\right)\\
- & \propto & \exp\left\{ \sum_{i=1}^{n}\left(-\frac{1}{2}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\boldsymbol{\Sigma}^{-1}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\right)\right\} \times\\
- &  & \qquad\exp\left\{ -\frac{1}{2}\left(\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)-\mathbf{0}\right)^{\prime}\left(\sigma_{0}^{2}\mathbf{I}\right)^{-1}\left(\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)-\mathbf{0}\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\sum_{i=1}^{n}\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)^{\prime}\boldsymbol{\Sigma}^{-1}\right)\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)+\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)^{\prime}\left(n\boldsymbol{\Sigma}^{-1}\right)\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\right\} \times\\
- &  & \qquad\exp\left\{ -\frac{1}{2}\left(\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)^{\prime}\left(\sigma_{0}^{2}\mathbf{I}\right)^{-1}\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\sum_{i=1}^{n}\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)^{\prime}\boldsymbol{\Sigma}^{-1}\right)\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)+\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)^{\prime}\left(n\boldsymbol{\Sigma}^{-1}+\left(\sigma_{0}^{2}\mathbf{I}\right)^{-1}\right)\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\right\} \\
- & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
-\end{eqnarray*}
-
-\end_inset
-
-where 
-\begin_inset Formula $\mathbf{A}=n\boldsymbol{\Sigma}^{-1}+\left(\sigma_{0}^{2}\mathbf{I}\right)^{-1}$
-\end_inset
-
- , 
-\begin_inset Formula $\mathbf{b}^{\prime}=\left(\begin{array}{c}
-\alpha_{0}\\
-\beta_{0}
-\end{array}\right)^{\prime}\boldsymbol{\Sigma}^{-1}$
-\end_inset
-
-, and 
-\begin_inset Formula $\left(\begin{array}{c}
-\alpha_{0}\\
-\beta_{0}
-\end{array}\right)$
-\end_inset
-
- is the vector sum 
-\begin_inset Formula $\sum_{i=1}^{n}\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)$
-\end_inset
-
-.
- 
-\end_layout
-
-\begin_layout Subsection
 Mean of occupancy coefficients (
 \begin_inset Formula $\boldsymbol{\mu}_{\beta}$
 \end_inset
@@ -659,7 +456,6 @@ Mean of detection coefficients (
 \begin_inset Formula 
 \begin{eqnarray*}
 \left[\boldsymbol{\mu}_{\alpha}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\right]\left[\boldsymbol{\mu}_{\alpha}\right]\\
- & \propto & \prod_{i=1}^{n}{\cal N}\left(\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right){\cal N}\left(\boldsymbol{\mu}_{\alpha}\mid\mathbf{0},\sigma_{\mu_{\alpha}}^{2}\mathbf{I}\right)\\
  & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
 \end{eqnarray*}
 
@@ -683,118 +479,6 @@ where
 
 .
  
-\end_layout
-
-\begin_layout Subsection
-Variance-covariance of occupancy and detection intercepts (
-\begin_inset Formula $\boldsymbol{\Sigma}$
-\end_inset
-
-)
-\end_layout
-
-\begin_layout Standard
-\noindent
-\begin_inset Formula 
-\begin{eqnarray*}
-\left[\boldsymbol{\Sigma}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right]\left[\boldsymbol{\Sigma}\right]\\
- & \propto & \prod_{i=1}^{n}{\cal N}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)\mid\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right),\boldsymbol{\Sigma}\right)\text{Wish}\left(\boldsymbol{\Sigma}\mid\mathbf{S}_{0},\nu\right)\\
- & \propto & \left|\boldsymbol{\Sigma}\right|^{-\frac{n}{2}}\exp\left\{ -\frac{1}{2}\sum_{i=1}^{n}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\boldsymbol{\Sigma}^{-1}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\right\} \\
- &  & \qquad\times\left|\mathbf{S}_{0}\right|^{-\frac{\nu}{2}}\left|\boldsymbol{\Sigma}\right|^{-\frac{\nu-qX-1}{2}}\exp\left\{ -\frac{1}{2}\text{tr}\left(\mathbf{S}_{0}\boldsymbol{\Sigma}^{-1}\right)\right\} \\
- & \propto & \left|\boldsymbol{\Sigma}\right|^{-\frac{n+\nu-qX-1}{2}}\exp\left\{ -\frac{1}{2}\left[\sum_{i=1}^{n}\text{tr}\left(\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\boldsymbol{\Sigma}^{-1}\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\right)+\text{tr}\left(\mathbf{S}_{0}\boldsymbol{\Sigma}^{-1}\right)\right]\right\} \\
- & \propto & \left|\boldsymbol{\Sigma}\right|^{-\frac{n+\nu-qX-1}{2}}\exp\left\{ -\frac{1}{2}\left[\sum_{i=1}^{n}\text{tr}\left(\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\boldsymbol{\Sigma}^{-1}\right)+\text{tr}\left(\mathbf{S}_{0}\boldsymbol{\Sigma}^{-1}\right)\right]\right\} \\
- & \propto & \left|\boldsymbol{\Sigma}\right|^{-\frac{n+\nu-qX-1}{2}}\exp\left\{ -\frac{1}{2}\left[\text{tr}\left(\sum_{i=1}^{n}\left(\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\right)\boldsymbol{\Sigma}^{-1}+\mathbf{S}_{0}\boldsymbol{\Sigma}^{-1}\right)\right]\right\} \\
- & \propto & \left|\boldsymbol{\Sigma}\right|^{-\frac{n+\nu-qX-1}{2}}\exp\left\{ -\frac{1}{2}\left[\text{tr}\left(\sum_{i=1}^{n}\left(\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\right)+\mathbf{S}_{0}\right)\boldsymbol{\Sigma}^{-1}\right]\right\} \\
- & = & \text{Wish}\left(\left(\sum_{i=1}^{n}\left(\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)\left(\left(\begin{array}{c}
-\alpha_{0i}\\
-\beta_{0i}
-\end{array}\right)-\left(\begin{array}{c}
-\mu_{\alpha_{0}}\\
-\mu_{\beta_{0}}
-\end{array}\right)\right)^{\prime}\right)+\mathbf{S}_{0}\right)^{-1},n+\nu\right).
-\end{eqnarray*}
-
-\end_inset
-
-
 \end_layout
 
 \begin_layout Subsection
@@ -847,7 +531,6 @@ Variance of detection coefficients (
 \begin_inset Formula 
 \begin{eqnarray*}
 \left[\sigma_{\alpha}^{2}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\right]\left[\sigma_{\alpha}^{2}\right]\\
- & \propto & \prod_{i=1}^{n}{\cal N}\left(\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right)\text{IG}\left(\sigma_{\alpha}^{2}\mid r,q\right)\\
  & = & \text{IG}\left(\left(\frac{\sum_{i=1}^{n}\left(\boldsymbol{\alpha}_{i}-\boldsymbol{\mu}_{\alpha}\right)^{\prime}\left(\boldsymbol{\alpha}_{i}-\boldsymbol{\mu}_{\alpha}\right)}{2}+\frac{1}{r}\right)^{-1},\frac{qW\times n}{2}+q\right),
 \end{eqnarray*}
 

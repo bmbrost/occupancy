@@ -122,7 +122,7 @@
 
 \series medium
 \color black
-Basic Community Occupancy Model
+Multiscale Community Occupancy Model
 \begin_inset VSpace -0.175in
 \end_inset
 
@@ -151,7 +151,7 @@ height "0.5pt"
 
 \color black
 Brian M.
- Brost / 28 June 2017 / Vetted: 
+ Brost / 29 June 2017 / Vetted: 
 \color red
 YES
 \end_layout
@@ -161,8 +161,7 @@ Description
 \end_layout
 
 \begin_layout Standard
-An occupancy model for multiple species where the detection and occupancy
- processes within a species are assumed independent.
+A 3-level multiscale occupancy model for multiple species.
 \end_layout
 
 \begin_layout Section
@@ -170,12 +169,9 @@ Implementation
 \end_layout
 
 \begin_layout Standard
-The file occ.community.sim.R simulates data according to the model statement
- below, and 
-\begin_inset Newline newline
-\end_inset
-
-occ.community.mcmc.R contains the MCMC algorithm for parameter estimation.
+The file occ.community.multiscale.sim.R simulates data according to the model
+ statement below, and occ.community.multiscale.mcmc.R contains the MCMC algorithm
+ for parameter estimation.
 \end_layout
 
 \begin_layout Section
@@ -184,7 +180,7 @@ Model Statement
 
 \begin_layout Standard
 Let 
-\begin_inset Formula $y_{ijt}$
+\begin_inset Formula $y_{ijkt}$
 \end_inset
 
  represent the number of detections for species 
@@ -196,6 +192,14 @@ Let
 \end_inset
 
 ) at site 
+\begin_inset Formula $k$
+\end_inset
+
+ (
+\begin_inset Formula $k=1,\ldots,M_{j}$
+\end_inset
+
+) in unit 
 \begin_inset Formula $j$
 \end_inset
 
@@ -208,38 +212,50 @@ Let
 \end_inset
 
  (
-\begin_inset Formula $t=1,\ldots,T_{j}$
+\begin_inset Formula $t=1,\ldots,T_{jk}$
 \end_inset
 
 ).
- Note that it is unnecessary to survey sites repeatedly through time and
- 
-\begin_inset Formula $T_{j}=1$
+ Note that sites are nested within units (or regions).
+ Also, it is unnecessary to survey sites repeatedly through time and 
+\begin_inset Formula $T_{jk}=1$
 \end_inset
 
  is okay for some or all 
 \begin_inset Formula $j$
 \end_inset
 
+ and 
+\begin_inset Formula $k$
+\end_inset
+
 .
- 
 \begin_inset Formula 
 \begin{eqnarray*}
-y_{ijt} & \sim & \begin{cases}
-\text{Binom}\left(J_{jt},p_{ijt}\right), & z_{ijt}=1\\
-0, & z_{ijt}=0
+y_{ijkt} & \sim & \begin{cases}
+\text{Binom}\left(J_{jkt},p_{ijkt}\right), & a_{ijkt}=1\\
+0, & a_{ijkt}=0
+\end{cases}\\
+a_{ijkt} & \sim & \begin{cases}
+0, & z_{ijt}=0\\
+0, & z_{ijt}=1\text{ and }v_{\gamma,ijkt}\le0\\
+1, & z_{ijt}=1\text{ and }v_{\gamma,ijkt}>0
 \end{cases}\\
 z_{ijt} & \sim & \begin{cases}
-0, & v_{ijt}\le1\\
-1, & v_{ijt}>0
+0, & v_{\beta,ijt}\le1\\
+1, & v_{\beta,ijt}>0
 \end{cases}\\
-v_{ijt} & \sim & {\cal N}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
-p_{ijt} & = & \text{logit}^{-1}\left(\mathbf{w}_{jt}^{\prime}\boldsymbol{\alpha}_{i}\right)\\
+v_{\beta,ijt} & \sim & {\cal N}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
+v_{\gamma,ijkt} & \sim & {\cal N}\left(\mathbf{u}_{jkt}^{\prime}\boldsymbol{\gamma}_{i},1\right)\\
+p_{ijkt} & = & \text{logit}^{-1}\left(\mathbf{w}_{jkt}^{\prime}\boldsymbol{\alpha}_{i}\right)\\
 \boldsymbol{\beta}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+\boldsymbol{\gamma}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\mathbf{I}\right)\\
 \boldsymbol{\alpha}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right)\\
 \boldsymbol{\mu}_{\beta} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)\\
+\boldsymbol{\mu}_{\gamma} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\gamma}}^{2}\mathbf{I}\right)\\
 \boldsymbol{\mu}_{\alpha} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\alpha}}^{2}\mathbf{I}\right)\\
 \sigma_{\beta}^{2} & \sim & \text{IG}\left(r,q\right)\\
+\sigma_{\gamma}^{2} & \sim & \text{IG}\left(r,q\right)\\
 \sigma_{\alpha}^{2} & \sim & \text{IG}\left(r,q\right)
 \end{eqnarray*}
 
@@ -264,10 +280,10 @@ Occupancy state (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[z_{ijt}\mid\cdot\right] & \propto & \left[y_{ijt}\mid p_{ijt},z_{ijt}\right]\left[z_{ijt}\mid v_{ijt}\right]\\
- & \propto & \text{Binom}\left(y_{ijt}\mid J_{jt},p_{ijt}\right)^{z_{ijt}}1_{\left\{ y_{ijt}=0\right\} }^{1-z_{ijt}}\text{Bern}\left(z_{ijt}\mid v_{ijt}\right)\\
- & \propto & \left(p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}\right)^{z_{ijt}}\left(1_{\left\{ y_{ijt}=0\right\} }^{1-z_{ijt}}\right)\psi_{ijt}^{z_{ijt}}\left(1-\psi_{ijt}\right)^{1-z_{ijt}}\\
- & \propto & \left(\psi_{ijt}p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}\right)^{z_{ijt}}\left(\left(1-\psi_{ijt}\right)1_{\left\{ y_{ijt}=0\right\} }\right)^{1-z_{ijt}}\\
+\left[z_{ijt}\mid\cdot\right] & \propto & \prod_{k=1}^{M_{j}}\left[a_{ijkt}\mid v_{\gamma,ijkt},z_{ijt}\right]\left[z_{ijt}\mid v_{\beta,ijt}\right]\\
+ & \propto & \prod_{k=1}^{M_{j}}\text{Bern}\left(a_{ijkt}\mid v_{\gamma,ijkt}\right)^{z_{ijt}}1_{\left\{ a_{ijkt}=0\right\} }^{1-z_{ijt}}\text{Bern}\left(z_{ijt}\mid v_{\beta,ijt}\right)\\
+ & \propto & \prod_{k=1}^{M_{j}}\left(\theta_{ijkt}^{a_{ijkt}}\left(1-\theta_{ijkt}\right)^{1-a_{ijkt}}\right)^{z_{ijkt}}\left(1_{\left\{ a_{ijkt}=0\right\} }^{1-z_{ijt}}\right)\psi_{ijt}^{z_{ijt}}\left(1-\psi_{ijt}\right)^{1-z_{ijt}}\\
+ & \propto & \left(\psi_{ijt}\prod_{k=1}^{M_{j}}\theta_{ijkt}^{a_{ijkt}}\left(1-\theta_{ijkt}\right)^{1-a_{ijkt}}\right)^{z_{ijt}}\left(\left(1-\psi_{ijt}\right)\prod_{k=1}^{M_{j}}1_{\left\{ a_{ijkt}=0\right\} }\right)^{1-z_{ijt}}\\
  & = & \text{Bern}\left(\tilde{\psi}_{ijt}\right),
 \end{eqnarray*}
 
@@ -276,13 +292,69 @@ Occupancy state (
 where
 \begin_inset Formula 
 \[
-\tilde{\psi}_{ijt}=\frac{\psi_{ijt}p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}}{\psi_{ijt}p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}+\left(1-\psi_{ijt}\right)1_{\left\{ y_{ijt}=0\right\} }}
+\tilde{\psi}_{ijt}=\frac{\psi_{ijt}\prod_{k=1}^{M_{j}}\theta_{ijkt}^{a_{ijkt}}\left(1-\theta_{ijkt}\right)^{1-a_{ijkt}}}{\psi_{ijt}\prod_{k=1}^{M_{j}}\theta_{ijkt}^{a_{ijkt}}\left(1-\theta_{ijkt}\right)^{1-a_{ijkt}}+\left(1-\psi_{ijt}\right)\prod_{k=1}^{M_{j}}1_{\left\{ a_{ijkt}=0\right\} }},
+\]
+
+\end_inset
+
+
+\begin_inset Formula $\psi_{ijt}=\Phi\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i}\right)$
+\end_inset
+
+, and 
+\begin_inset Formula $\theta_{ijkt}=\Phi\left(\mathbf{u}_{jkt}^{\prime}\boldsymbol{\gamma}_{i}\right)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Use state (
+\begin_inset Formula $a_{ijkt}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+Note that the mixture specification for 
+\begin_inset Formula $a_{ijkt}$
+\end_inset
+
+ in the model statement above is equivalent to 
+\begin_inset Formula $a_{ijkt}\sim\text{Bern}\left(z_{ijt}\theta_{ijkt}\right)$
+\end_inset
+
+, an alternate specification that simplifies the update for 
+\begin_inset Formula $a_{ijkt}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[a_{ijkt}\mid\cdot\right] & \propto & \left[y_{ijkt}\mid p_{ijkt},a_{ijkt}\right]\left[a_{ijkt}\mid v_{\gamma,ijkt},z_{ijt}\right]\\
+ & \propto & \text{Binom}\left(y_{ijkt}\mid J_{jkt},p_{ijkt}\right)^{a_{ijkt}}\left(1_{\left\{ y_{ijkt}=0\right\} }^{1-a_{ijkt}}\right)\text{Bern}\left(a_{ijkt}\mid v_{\gamma,ijkt}\right)^{z_{ijt}}\\
+ & \propto & \left(p_{ijkt}^{y_{ijkt}}\left(1-p_{ijkt}\right)^{J_{jkt}-y_{ijkt}}\right)^{a_{ijkt}}\left(1_{\left\{ y_{ijkt}=0\right\} }^{1-a_{ijkt}}\right)\left(z_{ijt}\theta_{ijkt}\right)^{a_{ijkt}}\left(1-z_{ijt}\theta_{ijkt}\right)^{1-a_{ijkt}}\\
+ & \propto & \left(\left(z_{ijt}\theta_{ijkt}\right)p_{ijkt}^{y_{ijkt}}\left(1-p_{ijkt}\right)^{J_{jkt}-y_{ijkt}}\right)^{a_{ijkt}}\left(\left(1-z_{ijt}\theta_{ijkt}\right)1_{\left\{ y_{ijkt}=0\right\} }\right)^{1-a_{ijkt}}\\
+ & = & \text{Bern}\left(\tilde{\theta}_{ijkt}\right),
+\end{eqnarray*}
+
+\end_inset
+
+where
+\begin_inset Formula 
+\[
+\tilde{\theta}_{ijkt}=\frac{z_{ijt}\theta_{ijkt}p_{ijkt}^{y_{ijkt}}\left(1-p_{ijkt}\right)^{J_{jkt}-y_{ijkt}}}{z_{ijt}\theta_{ijkt}p_{ijkt}^{y_{ijkt}}\left(1-p_{ijkt}\right)^{J_{jkt}-y_{ijkt}}+\left(1-z_{ijt}\theta_{ijkt}\right)1_{\left\{ y_{ijkt}=0\right\} }}
 \]
 
 \end_inset
 
 and 
-\begin_inset Formula $\psi_{ijt}=\Phi\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i}\right)$
+\begin_inset Formula $\theta_{ijkt}=\Phi\left(\mathbf{u}_{jkt}^{\prime}\boldsymbol{\gamma}_{i}\right)$
 \end_inset
 
 .
@@ -290,7 +362,7 @@ and
 
 \begin_layout Subsection
 Occupancy state auxiliary variable (
-\begin_inset Formula $v_{ijt}$
+\begin_inset Formula $v_{\beta,ijt}$
 \end_inset
 
 )
@@ -300,11 +372,36 @@ Occupancy state auxiliary variable (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[v_{ijt}\mid\cdot\right] & \propto & \left[z_{ijt}\mid v_{ijt}\right]\left[v_{ijt}\mid\boldsymbol{\beta}_{i}\right]\\
- & \propto & \left(1_{\left\{ z_{ijt}=0\right\} }1_{\left\{ v_{ijt}\le0\right\} }+1_{\left\{ z_{ijt}=1\right\} }1_{\left\{ v_{ijt}>0\right\} }\right)\times{\cal N}\left(v_{ijt}\mid\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
+\left[v_{\beta,ijt}\mid\cdot\right] & \propto & \left[z_{ijt}\mid v_{\beta,ijt}\right]\left[v_{\beta,ijt}\mid\boldsymbol{\beta}_{i}\right]\\
+ & \propto & \left(1_{\left\{ z_{ijt}=0\right\} }1_{\left\{ v_{\beta,ijt}\le0\right\} }+1_{\left\{ z_{ijt}=1\right\} }1_{\left\{ v_{\beta,ijt}>0\right\} }\right)\times{\cal N}\left(v_{\beta,ijt}\mid\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
  & = & \begin{cases}
 {\cal TN}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{-\infty}^{0}, & z_{ijt}=0\\
 {\cal TN}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{0}^{\infty}, & z_{ijt}=1
+\end{cases}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Use state auxiliary variable (
+\begin_inset Formula $v_{\gamma,ijkt}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[v_{\gamma,ijkt}\mid\cdot\right] & \propto & \left[a_{ijkt}\mid v_{\gamma,ijkt},z_{ijt}\right]\left[v_{\gamma,ijkt}\mid\boldsymbol{\gamma}{}_{i}\right]\\
+ & \propto & \left(1_{\left\{ a_{ijkt}=0\right\} }1_{\left\{ v_{\gamma,ijkt}\le0\right\} }+1_{\left\{ a_{ijkt}=1\right\} }1_{\left\{ v_{\gamma,ijkt}>0\right\} }\right)^{z_{ijt}}\times{\cal N}\left(v_{\gamma,ijkt}\mid\mathbf{u}_{jkt}^{\prime}\boldsymbol{\gamma}_{i},1\right)\\
+ & = & \begin{cases}
+{\cal TN}\left(\mathbf{u}_{jkt}^{\prime}\boldsymbol{\gamma}_{i},1\right)_{-\infty}^{0}, & z_{ijt}=1\text{ and }a_{ijkt}=0\\
+{\cal TN}\left(\mathbf{u}_{jkt}^{\prime}\boldsymbol{\gamma}_{i},1\right)_{0}^{\infty}, & z_{ijt}=1\text{ and }a_{ijkt}=1
 \end{cases}
 \end{eqnarray*}
 
@@ -325,11 +422,11 @@ Occupancy coefficients (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[\boldsymbol{\beta}_{i}\mid\cdot\right] & \propto & \left[\mathbf{v}_{i}\mid\boldsymbol{\beta}_{i}\right]\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\right]\\
- & \propto & {\cal N}\left(\mathbf{v}_{i}\mid\mathbf{X}\boldsymbol{\beta}_{i},\mathbf{1}\right){\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
- & \propto & \exp\left\{ -\frac{1}{2}\left(\mathbf{v}_{i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)^{\prime}\left(\mathbf{v}_{i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(-2\mathbf{v}_{i}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\mathbf{X}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(-2\left(\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\boldsymbol{\beta}_{i}\right)\right\} \\
- & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\mathbf{v}_{i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\mathbf{X}^{\prime}\mathbf{X}+\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}\right)\right\} \\
+\left[\boldsymbol{\beta}_{i}\mid\cdot\right] & \propto & \left[\mathbf{v}_{\beta,i}\mid\boldsymbol{\beta}_{i}\right]\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\right]\\
+ & \propto & {\cal N}\left(\mathbf{v}_{\beta,i}\mid\mathbf{X}\boldsymbol{\beta}_{i},\mathbf{1}\right){\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(\mathbf{v}_{\beta,i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)^{\prime}\left(\mathbf{v}_{\beta,i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\mathbf{v}_{\beta,i}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\mathbf{X}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(-2\left(\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\boldsymbol{\beta}_{i}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\mathbf{v}_{\beta,i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\mathbf{X}^{\prime}\mathbf{X}+\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}\right)\right\} \\
  & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
 \end{eqnarray*}
 
@@ -340,11 +437,11 @@ where
 \end_inset
 
 , 
-\begin_inset Formula $\mathbf{b}^{\prime}=\mathbf{v}_{i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
+\begin_inset Formula $\mathbf{b}^{\prime}=\mathbf{v}_{\beta,i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
 \end_inset
 
 , 
-\begin_inset Formula $\mathbf{v}_{i}^{\prime}=\left\{ v_{ijt},\forall j,t\right\} $
+\begin_inset Formula $\mathbf{v}_{\beta,i}^{\prime}=\left\{ v_{\beta,ijt},\forall j,t\right\} $
 \end_inset
 
 , and 
@@ -353,6 +450,65 @@ where
 
 .
  
+\end_layout
+
+\begin_layout Subsection
+Use coefficients (
+\begin_inset Formula $\boldsymbol{\gamma}_{i}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\gamma}_{i}\mid\cdot\right] & \propto & \left[\mathbf{v}_{\gamma,i}\mid\boldsymbol{\gamma}_{i},z_{ijt}\right]\left[\boldsymbol{\gamma}_{i}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\right]\\
+ & \propto & {\cal N}\left(\mathbf{v}_{\gamma,i}\mid\mathbf{U}\boldsymbol{\gamma}_{i},\mathbf{1}\right)^{z_{ijt}}{\cal N}\left(\boldsymbol{\gamma}_{i}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\mathbf{I}\right)\\
+ & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{A}=\mathbf{U}{}^{\prime}\mathbf{U}+\left(\sigma_{\gamma}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{b}^{\prime}=\mathbf{v}_{\gamma,i}^{\prime}\mathbf{U}+\boldsymbol{\mu}_{\gamma}^{\prime}\left(\sigma_{\gamma}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{v}_{\gamma,i}^{\prime}=\left\{ v_{\gamma,ijkt},\forall j,k,t:z_{ijt}=1\right\} $
+\end_inset
+
+, and 
+\begin_inset Formula $\mathbf{U}=\left\{ \mathbf{u}_{jkt}^{\prime},\forall j,k,t:z_{ijt}=1\right\} $
+\end_inset
+
+.
+ Note that the full condition for 
+\begin_inset Formula $\boldsymbol{\gamma}_{i}$
+\end_inset
+
+ only includes instances of 
+\begin_inset Formula $j$
+\end_inset
+
+, 
+\begin_inset Formula $k$
+\end_inset
+
+, and 
+\begin_inset Formula $t$
+\end_inset
+
+ such that 
+\begin_inset Formula $z_{ijt}=1$
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Subsection
@@ -367,8 +523,8 @@ Detection coefficients (
 \noindent
 \begin_inset Formula 
 \begin{eqnarray*}
-\left[\boldsymbol{\alpha}_{i}\mid\cdot\right] & \propto & \prod_{j=1}^{R}\prod_{t=1}^{T_{j}}\left[y_{ijt}\mid p_{ijk},z_{ijt}\right]\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\right]\\
- & \propto & \prod_{j=1}^{R}\prod_{t=1}^{T_{j}}\text{Binom}\left(y_{ijt}\mid J_{jt},p_{ijt}\right)^{z_{ijt}}{\cal N}\left(\mathbf{\boldsymbol{\alpha}}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right).
+\left[\boldsymbol{\alpha}_{i}\mid\cdot\right] & \propto & \prod_{j=1}^{R}\prod_{k=1}^{M_{j}}\prod_{t=1}^{T_{jk}}\left[y_{ijkt}\mid p_{ijkt},a_{ijkt}\right]\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\right]\\
+ & \propto & \prod_{j=1}^{R}\prod_{k=1}^{M_{j}}\prod_{t=1}^{T_{jk}}\text{Binom}\left(y_{ijkt}\mid J_{jkt},p_{ijkt}\right)^{a_{ijkt}}{\cal N}\left(\mathbf{\boldsymbol{\alpha}}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right).
 \end{eqnarray*}
 
 \end_inset
@@ -382,7 +538,11 @@ The update for
 \begin_inset Formula $j$
 \end_inset
 
- and 
+, 
+\begin_inset Formula $k$
+\end_inset
+
+, and 
 \begin_inset Formula $t$
 \end_inset
 
@@ -390,12 +550,16 @@ The update for
 \begin_inset Formula $j$
 \end_inset
 
- and 
+, 
+\begin_inset Formula $k$
+\end_inset
+
+ , and 
 \begin_inset Formula $t$
 \end_inset
 
  such that 
-\begin_inset Formula $z_{ijt}=1$
+\begin_inset Formula $a_{ijkt}=1$
 \end_inset
 
 .
@@ -437,6 +601,45 @@ where
 
  is the vector sum 
 \begin_inset Formula $\sum_{i=1}^{n}\boldsymbol{\beta}_{i}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+Mean of use coefficients (
+\begin_inset Formula $\boldsymbol{\mu}_{\gamma}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\mu}_{\gamma}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\gamma}_{i}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\right]\left[\boldsymbol{\mu}_{\gamma}\right]\\
+ & \propto & \prod_{i=1}^{n}{\cal N}\left(\boldsymbol{\gamma}_{i}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\mathbf{I}\right){\cal N}\left(\boldsymbol{\mu}_{\gamma}\mid\mathbf{0},\sigma_{\mu_{\gamma}}^{2}\mathbf{I}\right)\\
+ & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{A}=n\left(\sigma_{\gamma}^{2}\mathbf{I}\right)^{-1}+\left(\sigma_{\mu_{\gamma}}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+ , 
+\begin_inset Formula $\mathbf{b}^{\prime}=\boldsymbol{\gamma}^{\prime}\left(\sigma_{\gamma}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, and 
+\begin_inset Formula $\gamma$
+\end_inset
+
+ is the vector sum 
+\begin_inset Formula $\sum_{i=1}^{n}\boldsymbol{\gamma}_{i}$
 \end_inset
 
 .
@@ -514,6 +717,40 @@ where
 
  (or length of 
 \begin_inset Formula $\boldsymbol{\beta}_{i}$
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Variance of use coefficients (
+\begin_inset Formula $\sigma_{\gamma}^{2}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\sigma_{\gamma}^{2}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\gamma}_{i}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\right]\left[\sigma_{\gamma}^{2}\right]\\
+ & \propto & \prod_{i=1}^{n}{\cal N}\left(\boldsymbol{\gamma}_{i}\mid\boldsymbol{\mu}_{\gamma},\sigma_{\gamma}^{2}\mathbf{I}\right)\text{IG}\left(\sigma_{\gamma}^{2}\mid r,q\right)\\
+ & = & \text{IG}\left(\left(\frac{\sum_{i=1}^{n}\left(\boldsymbol{\gamma}_{i}-\boldsymbol{\mu}_{\gamma}\right)^{\prime}\left(\boldsymbol{\gamma}_{i}-\boldsymbol{\mu}_{\gamma}\right)}{2}+\frac{1}{r}\right)^{-1},\frac{qU\times n}{2}+q\right),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $qU$
+\end_inset
+
+ is the column dimension of 
+\begin_inset Formula $\mathbf{U}$
+\end_inset
+
+ (or length of 
+\begin_inset Formula $\boldsymbol{\gamma}_{i}$
 \end_inset
 
 ).
