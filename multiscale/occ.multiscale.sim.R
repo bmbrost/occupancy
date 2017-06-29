@@ -1,4 +1,4 @@
-setwd("~/Documents/git/Occupancy/")
+setwd("~/git/Occupancy/")
 rm(list=ls())
 
 library(lattice)
