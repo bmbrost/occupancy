@@ -31,12 +31,12 @@ logit <- function(expit){
 
 n <- 15  # total number of species in community
 R <- 5  # total number of units
-M <- rpois(R,10)  # number subunits per unit
+M <- rpois(R,10)  # number of sites per unit
 M
 # T <- 1  # each unit surveyed once
 T <- 20  # units surveyed repeatedly through time, where T is the number of sampling periods
 	# i.e., the temporal covariate model of Royle and Dorazio (2008; Page 396)
-J <- rpois(sum(M)*T,50)  # number of surveys conducted at each subunit and sampling period
+J <- rpois(sum(M)*T,50)  # number of surveys conducted at each site and sampling period
 hist(J);table(J)
 
 
@@ -85,7 +85,6 @@ qX <- ncol(X)  # number of covariates
 
 # Occupancy probability by unit, sampling period, and species (columns)
 psi <- t(apply(X,1,function(x) pnorm(x%*%beta)))
-# plot(psi[2,],pnorm(X[2,]%*%beta))  # check occupancy probabilities
 # hist(psi)
 
 # Assignment of rows in X to units and primary sampling periods
@@ -100,20 +99,19 @@ z <- t(apply(psi,1,function(x) rbinom(n,1,x)))
 ### Use: Design matrix, probabilities, and latent state
 ###
 
-# Design matrix - covariates by unit, subunit, and primary sampling period
+# Design matrix - covariates by unit, site, and primary sampling period
 U <- matrix(1,nrow=sum(M)*T,ncol=2)
 # U[,2] <- sample(c(0,1),nrow(U),replace=TRUE)
 U[,2] <- scale(rnorm(nrow(U)))
 qU <- ncol(U)  # number of covariates
 
-# Use probability by unit, subunit, primary sampling period, and species (columns)
+# Use probability by unit, site, primary sampling period, and species (columns)
 theta <- t(apply(U,1,function(x) pnorm(x%*%gamma)))
-# plot(theta[2,],pnorm(U[2,]%*%gamma))  # check probabilities of use
 # hist(theta)
 
-# Assignment of rows in U to units, subunits, and primary sampling periods
+# Assignment of rows in U to units, sites, and primary sampling periods
 groups$U <- data.frame(unit=rep(unlist(sapply(1:R,function(x) rep(x,M[x]))),each=T),
-	subunit=rep(unlist(sapply(1:R,function(x) 1:M[x])),each=T),time=rep(1:T,sum(M)))
+	site=rep(unlist(sapply(1:R,function(x) 1:M[x])),each=T),time=rep(1:T,sum(M)))
 
 # Create indicator variable that maps latent occupancy state (z) to use state (a)
 z.map <- match(paste(groups$U$unit,groups$U$time),paste(groups$X$unit,groups$X$time))
@@ -121,7 +119,8 @@ z.map <- match(paste(groups$U$unit,groups$U$time),paste(groups$X$unit,groups$X$t
 # Use state
 a <- t(apply(z[z.map,]*theta,1,function(x) rbinom(n,1,x)))
 # boxplot(c(z[z.map,]*theta)~c(a))
-# a[z[z.map,]==0]
+# table(a[z[z.map,]==0])
+
 
 ###
 ### Detection: Design matrix and probabilities
@@ -173,7 +172,7 @@ out1$keep
 ### Examine output
 ###
 
-idx <- 10
+idx <- 15
 p[1,idx]  # generally poor mixing of gamma for low p
 # cbind(z[z.map,idx],a[,idx],Y[,idx])
 matplot(out1$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
@@ -184,25 +183,30 @@ matplot(out1$mu.alpha,type="l");abline(h=mu.alpha,col=1:qW,lty=2);abline(h=rowMe
 matplot(out1$mu.gamma,type="l");abline(h=mu.gamma,col=1:qU,lty=2);abline(h=rowMeans(gamma),col=3,lty=2)
 matplot(out1$mu.beta,type="l");abline(h=mu.beta,col=1:qX,lty=2);abline(h=rowMeans(beta),col=3,lty=2)
 
-hist(out1$sigma.alpha);abline(v=sigma.alpha,lty=2,col=2)
-abline(v=sd(alpha),col=3,lty=2)
-
-hist(out1$sigma.gamma);abline(v=sigma.gamma,lty=2,col=2)
-abline(v=sd(gamma),col=3,lty=2)
-
-hist(out1$sigma.beta);abline(v=sigma.beta,lty=2,col=2)
-abline(v=sd(beta),col=3,lty=2)
+hist(out1$sigma.alpha);abline(v=sigma.alpha,lty=2,col=2);abline(v=sd(alpha),col=3,lty=2)
+hist(out1$sigma.gamma);abline(v=sigma.gamma,lty=2,col=2);abline(v=sd(gamma),col=3,lty=2)
+hist(out1$sigma.beta);abline(v=sigma.beta,lty=2,col=2);abline(v=sd(beta),col=3,lty=2)
 
 boxplot(out1$a.mean~a)
-out1$a.mean[a==0]
-out1$a.mean[a==1]
+hist(out1$a.mean[a==0],breaks=100)
+hist(out1$a.mean[a==1],breaks=100)
 
 boxplot(out1$z.mean~z)
-out1$z.mean[z==0]
-out1$z.mean[z==1]
+hist(out1$z.mean[z==0],breaks=100)
+hist(out1$z.mean[z==1],breaks=100)
+
+# Diversity by sampling period
+diversity <- data.frame(richness=c(out1$richness),hill0=c(out1$hill0),hill1=c(out1$hill1),
+	hill2=c(out1$hill2),time=rep(groups$X$time,each=out1$n.mcmc))
+bwplot(time~richness,data=diversity)  # richness based on latent occurence state (z)
+bwplot(time~hill0,data=diversity)  # richness based on Hill numbers (q=0)
+bwplot(time~hill1,data=diversity)  # Shannon diversity based on Hill numbers (q=1)
+bwplot(time~hill2,data=diversity)  # Simpson diversity based on Hill numbers (q=2)
 
 summary(out1$richness)
 hist(out1$richness[,10]);abline(v=sum(z[10,]),lty=2,col=2)
+
+
 
 # hist(out3$Sigma[1,1,],breaks=50);abline(v=Sigma[1,1],lty=2,col=2)
 # abline(v=var(alpha[1,]),col=3,lty=2)
