@@ -1,7 +1,7 @@
 occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	#
-	#  	Brian Brost (20 JUN 2017)
+	#  	Brian Brost (28 JUN 2017)
 	#	
 	#	Community occupancy model with independent detection and occupancy intercepts
 	#
@@ -51,40 +51,42 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	###  Create Variables 
 	###
 # browser()
-	n <- nrow(Y)
-	R <- ncol(Y)
+	n <- ncol(Y)  # number of species in community
+	R <- nrow(Y)  # number of units
 	qX <- ncol(X)
 	qW <- ncol(W)
-	v <- matrix(0,n,R)
+	
+	Y.inv <- ifelse(Y==0,1,0)  # for updating occupancy state (z)
+	v <- matrix(0,nrow=R,ncol=n)  # auxilliary variable for updating beta
+
+
+	###
+	###  Starting Values 
+	###
+
+	alpha <- start$alpha  # detection coefficients (p)
+	beta <- start$beta  # occupancy coefficients (psi)
+	mu.alpha <- matrix(start$mu.alpha,qW,1)  # mean for alpha	
+	mu.beta <- matrix(start$mu.beta,qX,1)  # mean for beta			
+	p <- expit(W%*%alpha)  # detection probability
+	z <- start$z  # latent occupancy state
+	
+	Sigma.beta <- diag(qX)*start$sigma.beta^2  # variance-covariance of occupancy coefficients
+	Sigma.beta.inv <- solve(Sigma.beta)	
+	
+	sigma.alpha <- start$sigma.alpha  # standard deviation of detection coefficients
+	Sigma.alpha <- diag(qW)*sigma.alpha^2   # variance-covariance of detection coefficients	
+	Sigma.alpha.inv <- solve(Sigma.alpha)
 
 	
 	###
 	###  Priors
 	###
 		
-	Sigma.mu.alpha <- diag(qW)*priors$sigma.mu.alpha^2
+	Sigma.mu.alpha <- diag(qW)*priors$sigma.mu.alpha^2  # prior covariance for mu.alpha
 	Sigma.mu.alpha.inv <- solve(Sigma.mu.alpha)
-	Sigma.mu.beta <- diag(qX)*priors$sigma.mu.beta^2
+	Sigma.mu.beta <- diag(qX)*priors$sigma.mu.beta^2  # prior covariance for mu.beta
 	Sigma.mu.beta.inv <- solve(Sigma.mu.beta)	
-
-	
-	###
-	###  Starting Values 
-	###
-
-	alpha <- start$alpha
-	beta <- start$beta
-	mu.alpha <- matrix(start$mu.alpha,qW,1)	
-	mu.beta <- matrix(start$mu.beta,qX,1)		
-	p <- expit(alpha)
-	z <- start$z
-	
-	Sigma.beta <- diag(qX)*start$sigma.beta^2
-	Sigma.beta.inv <- solve(Sigma.beta)	
-	
-	sigma.alpha <- start$sigma.alpha
-	Sigma.alpha <- diag(qW)*sigma.alpha^2	
-	Sigma.alpha.inv <- solve(Sigma.alpha)
 	
 	
 	###
@@ -94,12 +96,12 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	alpha.save <- array(0,c(n.mcmc,qW,n))
 	beta.save <- array(0,c(n.mcmc,qX,n))
-	z.mean <- matrix(0,n,R)
-	mu.alpha.save <- numeric(n.mcmc)
+	z.mean <- matrix(0,R,n)
+	mu.alpha.save <- matrix(0,n.mcmc,qW)
 	mu.beta.save <- matrix(0,n.mcmc,qX)
 	sigma.alpha.save <- numeric(n.mcmc)
 	sigma.beta.save <- numeric(n.mcmc)
-	N.save <- matrix(0,n.mcmc,R)
+	richness.save <- matrix(0,n.mcmc,R)
 
 	keep <- list(alpha=0)
 	keep.tmp <- keep
@@ -124,34 +126,34 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 	
 # browser()	   		   			
-		alpha.star <- rnorm(n,alpha,tune$alpha)  # proposals for alpha_i
-		p.star <- expit(alpha.star)  # proposals for p_i
-		A <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta
 
 		for (i in 1:n){  # loop through species
-# i <- 1
+# i <- 6
 			###
 			###  Sample v (auxilliary variable for z) 
 			###
 			
-			z0 <- z[i,]==0
-			z1 <- z[i,]==1
-			v[i,z0] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta[,i],1,-Inf,0,sum(z0))
-			v[i,z1] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta[,i],1,0,Inf,sum(z1))
+			z0 <- z[,i]==0
+			z1 <- z[,i]==1
+			v[z0,i] <- truncnormsamp(matrix(X[z0,],,qX)%*%beta[,i],1,-Inf,0,sum(z0))
+			v[z1,i] <- truncnormsamp(matrix(X[z1,],,qX)%*%beta[,i],1,0,Inf,sum(z1))
 				
 
 			###
 	  		###  Sample alpha_i and updata p_i
 		  	###
 # browser()
-			z1 <- z[i,]==1	
-		 	mh.star <- sum(dbinom(Y[i,z1],J[z1],p.star[i],log=TRUE))+
-				dnorm(alpha.star[i],mu.alpha,sigma.alpha,log=TRUE)
-		 	mh.0 <- sum(dbinom(Y[i,z1],J[z1],p[i],log=TRUE))+
-		 		dnorm(alpha[i],mu.alpha,sigma.alpha,log=TRUE)
+# if(k==2) browser()
+
+			alpha.star <- rnorm(qW,alpha[,i],tune$alpha)  # proposal
+			p.star <- expit(W%*%alpha.star)  # detection probability
+		 	mh.star <- sum(dbinom(Y[z1,i],J[z1],p.star[z1],log=TRUE))+
+				dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE)
+		 	mh.0 <- sum(dbinom(Y[z1,i],J[z1],p[z1,i],log=TRUE))+
+		 		dnorm(alpha[,i],mu.alpha,sigma.alpha,log=TRUE)
 			if(exp(mh.star-mh.0) > runif(1)){
-				alpha[i] <- alpha.star[i]
-				p[i] <- p.star[i]
+				alpha[,i] <- alpha.star
+				p[,i] <- p.star
 				keep$alpha <- keep$alpha+1
 				keep.tmp$alpha <- keep.tmp$alpha+1
 		  	}			
@@ -161,20 +163,20 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 			###  Sample beta_i and update psi_i
 			###
 # browser()	
-			b <- t(X)%*%v[i,]+Sigma.beta.inv%*%mu.beta			
+			A <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta
+			b <- t(X)%*%v[,i]+Sigma.beta.inv%*%mu.beta			
 			beta[,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
-			psi[i,] <- pnorm(X%*%beta[,i])
+			psi[,i] <- pnorm(X%*%beta[,i])
 	
 	
 			###
 			###  Sample z 
 			###
 # browser()			
-			idx <- Y[i,]==0
-			p1 <- psi[i,]*p[i]^Y[i,]*(1-p[i])^(J-Y[i,])
-			p0 <- 1-psi[i,]
+			p1 <- psi[,i]*p[,i]^Y[,i]*(1-p[,i])^(J-Y[,i])
+			p0 <- (1-psi[,i])*Y.inv[,i]
 			psi.tmp <- p1/(p1+p0)
-			z[i,idx] <- rbinom(sum(idx),1,psi.tmp[idx])					
+			z[,i] <- rbinom(R,1,psi.tmp)					
 
 		}  # end loop through species
 		
@@ -182,9 +184,9 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		###
 		###  Sample mu.alpha
 		###
-
+# browser()
 		A.inv <- solve(n*Sigma.alpha.inv+Sigma.mu.alpha.inv)
-		b <- Sigma.alpha.inv%*%sum(alpha)
+		b <- Sigma.alpha.inv%*%rowSums(alpha)
 	    mu.alpha <- A.inv%*%b+t(chol(A.inv))%*%matrix(rnorm(qW),qW,1)
 	    # mu.alpha <- rnorm(1,A.inv*b,A.inv)
 
@@ -232,11 +234,11 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		alpha.save[k,,] <- alpha
 		beta.save[k,,] <- beta
 		z.mean <- z.mean+z/n.mcmc
-		mu.alpha.save[k] <- mu.alpha
+		mu.alpha.save[k,] <- mu.alpha
 		mu.beta.save[k,] <- mu.beta
 		sigma.beta.save[k] <- sigma.beta
 		sigma.alpha.save[k] <- sigma.alpha
-		N.save[k,] <- colSums(z)
+		richness.save[k,] <- rowSums(z)
 	
 		}
 	cat("\n")
@@ -247,11 +249,13 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	
 	keep$alpha <- keep$alpha/n
 	keep <- lapply(keep,function(x) x/n.mcmc)
+
 	end <- list(alpha=alpha,beta=beta,z=z,mu.alpha=mu.alpha,mu.beta=mu.beta,
 		sigma.alpha=sigma.alpha,sigma.beta=sigma.beta)  # ending values
 
 	list(alpha=alpha.save,beta=beta.save,z.mean=z.mean,mu.alpha=mu.alpha.save,mu.beta=mu.beta.save,
-		sigma.alpha=sigma.alpha.save,sigma.beta=sigma.beta.save,N=N.save,keep=keep,
+		sigma.alpha=sigma.alpha.save,sigma.beta=sigma.beta.save,
+		richness=richness.save,keep=keep,end=end,
 		Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc,adapt=adapt)
 }
 
