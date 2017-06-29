@@ -47,13 +47,25 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
 	}
 
+	get.hill <- function(psi,q){  # calculate Hill numbers a la Broms et al. (2015)
+		sum.psi <- sum(psi)
+		relative.psi <- psi/sum.psi
+		if(q!=1){
+			out <- (sum(relative.psi^q))^(1/(1-q))
+		}
+		if(q==1){
+			out <- exp(-1*sum(relative.psi*log(relative.psi)))
+		}
+		out
+	}
+
 
 	###
 	###  Create Variables 
 	###
 # browser()
 	n <- ncol(Y)  # number of species in community
-	R <- nrow(Y)  # number of units
+	R <- nrow(Y)  # number of units and sampling periods
 	qW <- ncol(W)
 	qX <- ncol(X)
 		
@@ -103,6 +115,9 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 	Sigma.save <- array(0,dim=c(2,2,n.mcmc))
 	sigma.beta.save <- numeric(n.mcmc)
 	richness.save <- matrix(0,n.mcmc,R)
+	hill0.save <- matrix(0,n.mcmc,R)
+	hill1.save <- matrix(0,n.mcmc,R)
+	hill2.save <- matrix(0,n.mcmc,R)
 
 	keep <- list(alpha=0,beta=0)
 	keep.tmp <- keep
@@ -126,10 +141,9 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 			tune$beta <- get.tune(tune$beta,keep.tmp$beta/n,k)
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 		
-# browser()	
 		
 		for (i in 1:n){  # loop through species
-# i <- 1
+
 			###
 			###  Sample v (auxilliary variable for z) 
 			###
@@ -143,12 +157,12 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 			###
 	  		###  Sample alpha_0 (detection intercept)
 		  	###
-# browser()
+
 			alpha.star <- alpha[,i]
 			alpha.star[1] <- rnorm(1,alpha[1,i],tune$alpha)  # proposal
 			p.star <- expit(W%*%alpha.star)  # detection probability
 		 	mh.star <- sum(dbinom(Y[z1,i],J[z1],p.star[z1],log=TRUE))+
-				dmvnorm(c(alpha.star,beta[1,i]),mu.0,Sigma,log=TRUE)
+				dmvnorm(c(alpha.star[1],beta[1,i]),mu.0,Sigma,log=TRUE)
 		 	mh.0 <- sum(dbinom(Y[z1,i],J[z1],p[z1,i],log=TRUE))+
 				dmvnorm(c(alpha[1,i],beta[1,i]),mu.0,Sigma,log=TRUE)
 			if(exp(mh.star-mh.0) > runif(1)){
@@ -170,26 +184,26 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 			mh.0 <- sum(dnorm(v[,i],X%*%beta[,i],1,log=TRUE),na.rm=TRUE)+
 				dmvnorm(c(alpha[1,i],beta[1,i]),mu.0,Sigma,log=TRUE)
 			if(exp(mh.star-mh.0) > runif(1)){
-				beta[1,i] <- beta.star[1]
+				beta[,i] <- beta.star
 				keep$beta <- keep$beta+1
 				keep.tmp$beta <- keep.tmp$beta+1
 		  	}			
 
 			
 			###
-			###  Sample beta_i and update psi_i
+			###  Sample beta_i (psi)
 			###
-# browser()	
-			A <- solve(t(X[,-1])%*%X[,-1]+Sigma.beta.inv)
+
+			A.inv <- solve(t(X[,-1])%*%X[,-1]+Sigma.beta.inv)
 			b <- t(X[,-1])%*%c(v[,i]-beta[1,i])+Sigma.beta.inv%*%mu.beta[-1]
-			beta[-1,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX-1),qX-1,1)
+			beta[-1,i] <- A.inv%*%b+t(chol(A.inv))%*%matrix(rnorm(qX-1),qX-1,1)
 			psi[,i] <- pnorm(X%*%beta[,i])			
 
 	
 			###
 			###  Sample z 
 			###
-# browser()			
+
 			p1 <- psi[,i]*p[,i]^Y[,i]*(1-p[,i])^(J-Y[,i])
 			p0 <- (1-psi[,i])*Y.inv[,i]
 			psi.tmp <- p1/(p1+p0)
@@ -201,7 +215,7 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 		###
 		###  Sample mu.0 (alpha_0 and beta_0)
 		###
-# browser()
+
 		beta.sum <- rowSums(beta)
 		alpha.sum <- rowSums(alpha)
 		A.inv <- solve(n*Sigma.inv+Sigma.0.inv)
@@ -224,7 +238,7 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 		###
 		### Sample Sigma
 		###
-# browser()		
+
 		tmp <- apply(cbind(alpha[1,],beta[1,]),1,function(x) crossprod(t(x-mu.0)))
 		Sn <- S0+matrix(rowSums(tmp),2,2)
 		Sigma <- solve(rWishart(1,nu+n,solve(Sn))[,,1])
@@ -234,7 +248,7 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 		###
 		###  Sample sigma.beta 
 		###	
-# browser()
+
 		tmp <- apply(beta,2,function(x) x-mu.beta)^2
 		tmp <- sum(tmp[-1,])
 		r.tmp <- 1/(tmp/2+1/priors$r)
@@ -244,8 +258,8 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 		Sigma.beta.inv <- solve(Sigma.beta)				
 		sigma.beta <- sqrt(sigma.beta)
 
-		# if(qW>1){
-
+		# if(qW>1){  # Add updates if detection varies by more than just species
+# browser()
 			# ###
 			# ###  Sample mu.alpha
 			# ###
@@ -257,6 +271,15 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 			
 		# }
 
+		
+		###
+		### Calculate Hill numbers a la Broms et al. (2015)
+		###
+		
+		hill0 <- apply(psi,1,function(x) get.hill(x,q=0))  # richness
+		hill1 <- apply(psi,1,function(x) get.hill(x,q=1))  # Shannon diversity
+		hill2 <- apply(psi,1,function(x) get.hill(x,q=2))  # Simpson diversity
+		
 
 		###
 		###  Save samples 
@@ -270,8 +293,11 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 		Sigma.save[,,k] <- Sigma
 		sigma.beta.save[k] <- sigma.beta
 		richness.save[k,] <- rowSums(z)
+		hill0.save[k,] <- hill0
+		hill1.save[k,] <- hill1
+		hill2.save[k,] <- hill2		
 
-		}
+	}
 	cat("\n")
 	
 	###
@@ -279,6 +305,7 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 	###
 	
 	keep$alpha <- keep$alpha/n
+	keep$beta <- keep$beta/n
 	keep <- lapply(keep,function(x) x/n.mcmc)
 
 	end <- list(alpha=alpha,beta=beta,z=z,mu.alpha=mu.alpha,mu.beta=mu.beta,  # ending values
@@ -286,6 +313,6 @@ occ.community.correlated.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt
 
 	list(alpha=alpha.save,beta=beta.save,z.mean=z.mean,mu.alpha=mu.alpha.save,mu.beta=mu.beta.save,
 		Sigma=Sigma.save,sigma.beta=sigma.beta.save,
-		richness=richness.save,keep=keep,end=end,
+		richness=richness.save,hill0=hill0.save,hill1=hill1.save,hill2=hill2.save,keep=keep,end=end,
 		Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc,adapt=adapt)
 }

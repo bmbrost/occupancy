@@ -46,6 +46,18 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		# a <- min(0.025,1/sqrt(k))
 		exp(ifelse(keep<target,log(tune)-a,log(tune)+a))
 	}
+	
+	get.hill <- function(psi,q){  # calculate Hill numbers a la Broms et al. (2015)
+		sum.psi <- sum(psi)
+		relative.psi <- psi/sum.psi
+		if(q!=1){
+			out <- (sum(relative.psi^q))^(1/(1-q))
+		}
+		if(q==1){
+			out <- exp(-1*sum(relative.psi*log(relative.psi)))
+		}
+		out
+	}
 
 
 	###
@@ -111,8 +123,8 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	alpha.save <- array(0,c(n.mcmc,qW,n))	
 	gamma.save <- array(0,c(n.mcmc,qU,n))
 	beta.save <- array(0,c(n.mcmc,qX,n))
-	a.mean <- matrix(0,nrow(groups$U),n)
-	z.mean <- matrix(0,nrow(groups$X),n)
+	a.mean <- matrix(0,nrow(U),n)
+	z.mean <- matrix(0,nrow(X),n)
 	mu.alpha.save <- matrix(0,n.mcmc,qW)
 	mu.gamma.save <- matrix(0,n.mcmc,qU)
 	mu.beta.save <- matrix(0,n.mcmc,qX)
@@ -120,6 +132,9 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	sigma.gamma.save <- numeric(n.mcmc)
 	sigma.beta.save <- numeric(n.mcmc)
 	richness.save <- matrix(0,n.mcmc,nrow(z))
+	hill0.save <- matrix(0,n.mcmc,nrow(X))
+	hill1.save <- matrix(0,n.mcmc,nrow(X))
+	hill2.save <- matrix(0,n.mcmc,nrow(X))
 	
 	keep <- list(alpha=0)  # number of MH proposals accepted
 	keep.tmp <- keep  # for adaptive tuning
@@ -144,7 +159,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	   	} 	
 		
 		for(i in 1:n){  # loop through species
-# i <- 2	
+
 			###
 		  	###  Sample a (use state)
 		  	###
@@ -163,10 +178,10 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 			###
 	  		###  Sample alpha (detection)
 		  	###
-# browser()
+
 			alpha.star <- rnorm(qW,alpha[,i],tune$alpha)  # proposal
 			p.star <- expit(W%*%alpha.star)  # detection probability
-			a1 <- a[,i]==1  # update depends only on subunits that are 'used'
+			a1 <- a[,i]==1  # update depends only on sites that are 'used'
 		 	mh.star <- sum(dbinom(Y[a1,i],J[a1],p.star[a1],log=TRUE))+
 				dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE)
 		 	mh.0 <- sum(dbinom(Y[a1,i],J[a1],p[a1,i],log=TRUE))+
@@ -182,7 +197,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		  	###
 			###  Sample v.gamma (auxilliary variable for z) 
 			###
-# browser()
+
 			z.tmp <- z.tmp==1
 			a1 <- which(a[,i]==1&z.tmp)
 			a0 <- which(a[,i]==0&z.tmp)
@@ -193,19 +208,19 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 			###
 			###  Sample gamma (theta)
 			###
-# browser()	
+
 			v.gamma.tmp <- v.gamma[z.tmp,i]
 			U.tmp <- U[z.tmp,]
-			A <- solve(t(U.tmp)%*%U.tmp+Sigma.gamma.inv)
+			A.inv <- solve(t(U.tmp)%*%U.tmp+Sigma.gamma.inv)
 			b <- t(U.tmp)%*%v.gamma.tmp+Sigma.gamma.inv%*%mu.gamma			
-			gamma[,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qU),qU,1)
+			gamma[,i] <- A.inv%*%b+t(chol(A.inv))%*%matrix(rnorm(qU),qU,1)
 			theta[,i] <- pnorm(U%*%gamma[,i])			
 			
 
 			###
 			###  Sample v.beta (auxilliary variable for z) 
 			###
-# browser()
+
 			z0 <- z[,i]==0
 			z1 <- z[,i]==1
 			v.beta[z0,i] <- truncnormsamp(X[z0,]%*%beta[,i],1,-Inf,0,sum(z0))
@@ -215,10 +230,10 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 			###
 			###  Sample beta (psi)
 			###
-# browser()	
-			A <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta		
+
+			A.inv <- solve(t(X)%*%X+Sigma.beta.inv)  # for update of beta		
 			b <- t(X)%*%v.beta[,i]+Sigma.beta.inv%*%mu.beta			
-			beta[,i] <- A%*%b+t(chol(A))%*%matrix(rnorm(qX),qX,1)
+			beta[,i] <- A.inv%*%b+t(chol(A.inv))%*%matrix(rnorm(qX),qX,1)
 			psi[,i] <- pnorm(X%*%beta[,i])			
 
 
@@ -228,7 +243,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	
 			# gamma.star <- rnorm(qU,gamma[,i],tune$gamma)  # proposal
 			# theta.star <- expit(U%*%gamma.star)  # probability of use
-			# z1 <- z.tmp==1  # update depends only on subunits within occupied units
+			# z1 <- z.tmp==1  # update depends only on sites within occupied units
 			# mh.star <- sum(dbinom(a[z1,i],1,theta.star[z1],log=TRUE))+
 				# sum(dnorm(gamma.star,mu.gamma,sigma.gamma,log=TRUE))		
 			# mh.0 <- sum(dbinom(a[z1,i],1,theta[z1,i],log=TRUE))+
@@ -264,7 +279,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		###
 	  	###  Sample z (occupancy state)
 	  	###
-# browser()
+
 		a.inv <- ifelse(a==1,0,1)  
 		p1 <- psi*apply((theta^a)*((1-theta)^(1-a)),2,function(x) tapply(x,z.map,prod))
 		p0 <- (1-psi)*apply(a.inv,2,function(x) tapply(x,z.map,prod))
@@ -277,7 +292,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		###
 		###  Sample mu.alpha
 		###
-# browser()
+
 		alpha.sum <- rowSums(alpha)
 		A.inv <- solve(n*Sigma.alpha.inv+Sigma.mu.alpha.inv)
 		b <- Sigma.alpha.inv%*%alpha.sum
@@ -308,7 +323,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		###
 		###  Sample sigma.alpha
 		###	
-# browser()
+
 		tmp <- sum(apply(alpha,2,function(x) x-mu.alpha)^2)
 		r.tmp <- 1/(tmp/2+1/priors$r)
 		q.tmp <- ((qW)*n)/2+priors$q
@@ -321,7 +336,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		###
 		###  Sample sigma.gamma
 		###	
-# browser()
+
 		tmp <- sum(apply(gamma,2,function(x) x-mu.gamma)^2)
 		r.tmp <- 1/(tmp/2+1/priors$r)
 		q.tmp <- ((qU)*n)/2+priors$q
@@ -345,9 +360,18 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 
 
 		###
+		### Calculate unit-level diversity using Hill numbers a la Broms et al. (2015)
+		###
+		
+		hill0 <- apply(psi,1,function(x) get.hill(x,q=0))  # richness
+		hill1 <- apply(psi,1,function(x) get.hill(x,q=1))  # Shannon diversity
+		hill2 <- apply(psi,1,function(x) get.hill(x,q=2))  # Simpson diversity
+		
+		
+		###
 	  	###  Save samples 
 	  	###
-# browser()
+
 	  	alpha.save[k,,] <- alpha
 	  	gamma.save[k,,] <- gamma
 	  	beta.save[k,,] <- beta
@@ -360,6 +384,10 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		sigma.gamma.save[k] <- sigma.gamma
 		sigma.beta.save[k] <- sigma.beta
 		richness.save[k,] <- rowSums(z)
+		hill0.save[k,] <- hill0
+		hill1.save[k,] <- hill1
+		hill2.save[k,] <- hill2		
+		
 	}
 	cat("\n")
 	
@@ -379,6 +407,6 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	list(alpha=alpha.save,gamma=gamma.save,beta=beta.save,a.mean=a.mean,z.mean=z.mean,
 		mu.alpha=mu.alpha.save,mu.gamma=mu.gamma.save,mu.beta=mu.beta.save,
 		sigma.alpha=sigma.alpha.save,sigma.gamma=sigma.gamma.save,sigma.beta=sigma.beta.save,
-		richness=richness.save,keep=keep,end=end,
+		richness=richness.save,hill0=hill0.save,hill1=hill1.save,hill2=hill2.save,keep=keep,end=end,
 		Y=Y,J=J,groups=groups,W=W,U=U,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
 }
