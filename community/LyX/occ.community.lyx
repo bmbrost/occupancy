@@ -1,0 +1,540 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+\usepackage{pdflscape}
+\usepackage{color}
+\usepackage{hyperref}
+
+\usepackage{sectsty}
+\partfont{\centering\normalfont\Large}
+\sectionfont{\normalfont\normalsize\scshape}
+\subsectionfont{\normalfont\normalsize\slshape}
+
+%\usepackage{titlesec}
+%\titleformat{\part}
+  %{\normalfont\Large\centering}
+  %{\thepart}
+  %{2em}
+  %{}
+  %[{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
+
+%\titleformat{\section}
+  %{\normalfont\scshape}
+  %{\thesection}
+  %{1em}
+  %{}
+
+%\titleformat{\subsection}
+  %{\normalfont\slshape}
+  %{\thesubsection}
+  %{1em}
+  %{}
+
+%\titlespacing*{\subsection}
+%{0pt}{1cm}{0pt}
+  
+% Make TOC hyperlinks
+\hypersetup{
+  colorlinks=true, %set true if you want colored links
+  linktoc=all,     %set to all if you want both sections and subsections linked
+  linkcolor=blue,  %choose some color if you want links to stand out
+  bookmarksopen=true
+}
+
+%\usepackage[nodayofweek]{datetime}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Part*
+
+\series medium
+\color black
+Basic Community Occupancy Model
+\begin_inset VSpace -0.175in
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset line
+LatexCommand rule
+offset "0ex"
+width "100col%"
+height "0.5pt"
+
+\end_inset
+
+
+\begin_inset Separator latexpar
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\align center
+
+\color black
+Brian M.
+ Brost / 28 June 2017 / Vetted: 
+\color red
+NO
+\end_layout
+
+\begin_layout Section
+Description
+\end_layout
+
+\begin_layout Standard
+An occupancy model for multiple species where the detection and occupancy
+ processes within a species are assumed independent.
+\end_layout
+
+\begin_layout Section
+Implementation
+\end_layout
+
+\begin_layout Standard
+The file occ.community.sim.R simulates data according to the model statement
+ below, and occ.community.mcmc.R contains the MCMC algorithm for parameter
+ estimation.
+\end_layout
+
+\begin_layout Section
+Model Statement
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $y_{ijt}$
+\end_inset
+
+ represent the number of detections for  
+\begin_inset Formula $i=1,\ldots,n$
+\end_inset
+
+ species, 
+\begin_inset Formula $j=1,\ldots,R$
+\end_inset
+
+ sites, and 
+\begin_inset Formula $t=1,\ldots,T_{j}$
+\end_inset
+
+ sampling periods.
+ Note that it is unnecessary to survey sites repeatedly through time (i.e.,
+ 
+\begin_inset Formula $T_{j}=1$
+\end_inset
+
+ is allowed for some or all 
+\begin_inset Formula $j$
+\end_inset
+
+).
+ 
+\begin_inset Formula 
+\begin{eqnarray*}
+y_{ijt} & \sim & \begin{cases}
+\text{Binom}\left(J_{jt},p_{ijt}\right), & z_{ijt}=1\\
+0, & z_{ijt}=0
+\end{cases}\\
+z_{ijt} & \sim & \begin{cases}
+0, & v_{ijt}\le1\\
+1, & v_{ijt}>0
+\end{cases}\\
+v_{ijt} & \sim & {\cal N}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
+p_{ijt} & = & \text{logit}^{-1}\left(\mathbf{w}_{jt}^{\prime}\boldsymbol{\alpha}_{i}\right)\\
+\boldsymbol{\beta}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+\boldsymbol{\alpha}_{i} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right)\\
+\boldsymbol{\mu}_{\beta} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)\\
+\boldsymbol{\mu}_{\alpha} & \sim & {\cal N}\left(\mathbf{0},\sigma_{\mu_{\alpha}}^{2}\mathbf{I}\right)\\
+\sigma_{\beta}^{2} & \sim & \text{IG}\left(r,q\right)\\
+\sigma_{\alpha}^{2} & \sim & \text{IG}\left(r,q\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Full-conditional Distributions
+\end_layout
+
+\begin_layout Subsection
+Occupancy state (
+\begin_inset Formula $z_{ijt}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[z_{ijt}\mid\cdot\right] & \propto & \left[y_{ijt}\mid p_{ijt},z_{ijt}\right]\left[z_{ijt}\mid v_{ijt}\right]\\
+ & \propto & \text{Binom}\left(y_{ijt}\mid J_{jt},p_{ijt}\right)^{z_{ijt}}1_{\left\{ y_{ijt}=0\right\} }^{1-z_{ijt}}\text{Bern}\left(z_{ijt}\mid v_{ijt}\right)\\
+ & \propto & \left(p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}\right)^{z_{ijt}}\left(1_{\left\{ y_{ijt}=0\right\} }^{1-z_{ijt}}\right)\psi_{ijt}^{z_{ijt}}\left(1-\psi_{ijt}\right)^{1-z_{ijt}}\\
+ & \propto & \left(\psi_{ijt}p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}\right)^{z_{ijt}}\left(\left(1-\psi_{ijt}\right)1_{\left\{ y_{ijt}=0\right\} }\right)^{1-z_{ijt}}\\
+ & = & \text{Bern}\left(\tilde{\psi}_{ijt}\right),
+\end{eqnarray*}
+
+\end_inset
+
+where,
+\begin_inset Formula 
+\[
+\tilde{\psi}_{ijt}=\frac{\psi_{ijt}p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}}{\psi_{ijt}p_{ijt}^{y_{ijt}}\left(1-p_{ijt}\right)^{J_{jt}-y_{ijt}}+\left(1-\psi_{ijt}\right)1_{\left\{ yijt=0\right\} }}
+\]
+
+\end_inset
+
+and 
+\begin_inset Formula $\psi_{ijt}=\Phi\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i}\right)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Occupancy state auxiliary variable (
+\begin_inset Formula $v_{ijt}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[v_{ijt}\mid\cdot\right] & \propto & \left[z_{ijt}\mid v_{ijt}\right]\left[v_{ijt}\mid\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right]\\
+ & \propto & \left(1_{\left\{ z_{ijt}=0\right\} }1_{\left\{ v_{ijt}\le0\right\} }+1_{\left\{ z_{ijt}=1\right\} }1_{\left\{ v_{ijt}>0\right\} }\right)\times{\cal N}\left(v_{ijt}\mid\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)\\
+ & = & \begin{cases}
+{\cal TN}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{-\infty}^{0}, & z_{ijt}=0\\
+{\cal TN}\left(\mathbf{x}_{jt}^{\prime}\boldsymbol{\beta}_{i},1\right)_{0}^{\infty}, & z_{ijt}=1
+\end{cases}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Occupancy coefficients (
+\begin_inset Formula $\boldsymbol{\beta}_{i}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\beta}_{i}\mid\cdot\right] & \propto & \left[\mathbf{v}_{i}\mid\mathbf{X}\boldsymbol{\beta}_{i},\mathbf{1}\right]\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right]\\
+ & \propto & {\cal N}\left(\mathbf{v}_{i}\mid\mathbf{X}\boldsymbol{\beta}_{i},\mathbf{1}\right){\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(\mathbf{v}_{i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)^{\prime}\left(\mathbf{v}_{i}-\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\mathbf{v}_{i}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\mathbf{X}^{\prime}\mathbf{X}\boldsymbol{\beta}_{i}\right)\right\} \exp\left\{ -\frac{1}{2}\left(-2\left(\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\boldsymbol{\beta}_{i}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\mathbf{v}_{i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}+\boldsymbol{\beta}_{i}^{\prime}\left(\mathbf{X}^{\prime}\mathbf{X}+\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\beta}_{i}\right)\right\} \\
+ & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{A}=\mathbf{X}{}^{\prime}\mathbf{X}+\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{b}^{\prime}=\mathbf{v}_{i}^{\prime}\mathbf{X}+\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{v}_{i}^{\prime}=\left\{ v_{ijt},\forall j,t\right\} $
+\end_inset
+
+, and 
+\begin_inset Formula $\mathbf{X}=\left\{ \mathbf{x}_{jt}^{\prime},\forall j,t\right\} $
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+Detection coefficients (
+\begin_inset Formula $\boldsymbol{\alpha}_{i}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\alpha}_{i}\mid\cdot\right] & \propto & \prod_{j=1}^{R}\prod_{t=1}^{T_{j}}\left[y_{ijt}\mid p_{ijk},z_{ijt}\right]\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right]\\
+ & \propto & \prod_{j=1}^{R}\prod_{t=1}^{T_{j}}\text{Binom}\left(y_{ijt}\mid J_{jt},p_{ijt}\right)^{z_{ijt}}{\cal N}\left(\mathbf{\boldsymbol{\alpha}}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right).
+\end{eqnarray*}
+
+\end_inset
+
+The update for 
+\begin_inset Formula $\boldsymbol{\alpha}_{i}$
+\end_inset
+
+ proceeds using Metropolis-Hastings.
+ Note that the product over 
+\begin_inset Formula $j$
+\end_inset
+
+ and 
+\begin_inset Formula $t$
+\end_inset
+
+ only includes instances of 
+\begin_inset Formula $j$
+\end_inset
+
+ and 
+\begin_inset Formula $t$
+\end_inset
+
+ such that 
+\begin_inset Formula $z_{ijt}=1$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Mean of occupancy coefficients (
+\begin_inset Formula $\boldsymbol{\mu}_{\beta}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\mu}_{\beta}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right]\left[\boldsymbol{\mu}_{\beta}\right]\\
+ & \propto & \prod_{i=1}^{n}{\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\boldsymbol{\sigma_{\beta}^{2}\mathbf{I}}\right){\cal N}\left(\boldsymbol{\mu}_{\beta}\mid\mathbf{0},\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)\\
+ & \propto & \exp\left\{ \sum_{i=1}^{n}\left(-\frac{1}{2}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\mu}_{\beta}-\mathbf{0}\right)^{\prime}\left(\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)^{-1}\left(\boldsymbol{\mu}_{\beta}-\mathbf{0}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\sum_{i=1}^{n}\mathbf{\boldsymbol{\beta}}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\mu}_{\beta}+\boldsymbol{\mu}_{\beta}^{\prime}\left(n\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\mu}_{\beta}\right)\right\} \exp\left\{ -\frac{1}{2}\left(\boldsymbol{\mu}_{\beta}^{\prime}\left(\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)^{-1}\boldsymbol{\mu}_{\beta}\right)\right\} \\
+ & \propto & \exp\left\{ -\frac{1}{2}\left(-2\left(\sum_{i=1}^{n}\mathbf{\boldsymbol{\beta}}_{i}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\mu}_{\beta}+\boldsymbol{\mu}_{\beta}^{\prime}\left(n\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}+\left(\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)^{-1}\right)\boldsymbol{\mu}_{\beta}\right)\right\} \\
+ & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{A}=n\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}+\left(\sigma_{\mu_{\beta}}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+ , 
+\begin_inset Formula $\mathbf{b}^{\prime}=\boldsymbol{\beta}^{\prime}\left(\sigma_{\beta}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, and 
+\begin_inset Formula $\boldsymbol{\beta}$
+\end_inset
+
+ is the vector sum 
+\begin_inset Formula $\sum_{i=1}^{n}\boldsymbol{\beta}_{i}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+Mean of detection coefficients (
+\begin_inset Formula $\boldsymbol{\mu}_{\alpha}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\mu}_{\alpha}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right]\left[\boldsymbol{\mu}_{\alpha}\right]\\
+ & = & {\cal N}(\mathbf{A}^{-1}\mathbf{b},\mathbf{A}^{-1}),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{A}=n\left(\sigma_{\alpha}^{2}\mathbf{I}\right)^{-1}+\left(\sigma_{\mu_{\alpha}}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+ , 
+\begin_inset Formula $\mathbf{b}^{\prime}=\boldsymbol{\alpha}^{\prime}\left(\sigma_{\alpha}^{2}\mathbf{I}\right)^{-1}$
+\end_inset
+
+, and 
+\begin_inset Formula $\boldsymbol{\alpha}$
+\end_inset
+
+ is the vector sum 
+\begin_inset Formula $\sum_{i=1}^{n}\boldsymbol{\alpha}_{i}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+Variance of occupancy coefficients (
+\begin_inset Formula $\sigma_{\beta}^{2}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\sigma_{\beta}^{2}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\right]\left[\sigma_{\beta}^{2}\right]\\
+ & \propto & \prod_{i=1}^{n}{\cal N}\left(\boldsymbol{\beta}_{i}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\text{IG}\left(\sigma_{\beta}^{2}\mid r,q\right)\\
+ & \propto & \prod_{i=1}^{n}\left|\sigma_{\beta}^{2}\mathbf{\text{\textbf{I}}}\right|^{-1/2}\exp\left\{ -\frac{1}{2}\left(\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\sigma_{\beta}^{2}\text{\textbf{I}}\right)^{-1}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right)\right\} \left(\sigma_{\beta}^{2}\right)^{-(q+1)}\exp\left\{ -\frac{1}{r\sigma_{\beta}^{2}}\right\} \\
+ & \propto & \left(\sigma_{\beta}^{2}\right)^{-\left(qX\times n\right)/2}\exp\left\{ \sum_{i=1}^{n}\left(-\frac{1}{2\sigma_{\beta}^{2}}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)\right)\right\} \left(\sigma_{\beta}^{2}\right)^{-(q+1)}\exp\left\{ -\frac{1}{r\sigma_{\beta}^{2}}\right\} \\
+ & \propto & \left(\sigma_{\beta}^{2}\right)^{-\left(\left(qX\times n\right)/2+q+1\right)}\exp\left\{ -\frac{1}{\sigma_{\beta}^{2}}\left(\frac{\sum_{i=1}^{n}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)}{2}+\frac{1}{r}\right)\right\} \\
+ & = & \text{IG}\left(\left(\frac{\sum_{i=1}^{n}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)^{\prime}\left(\boldsymbol{\beta}_{i}-\boldsymbol{\mu}_{\beta}\right)}{2}+\frac{1}{r}\right)^{-1},\frac{qX\times n}{2}+q\right),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $qX$
+\end_inset
+
+ is the column dimension of 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+ (or length of 
+\begin_inset Formula $\boldsymbol{\beta}_{i}$
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Variance of detection coefficients (
+\begin_inset Formula $\sigma_{\beta}^{2}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\sigma_{\alpha}^{2}\mid\cdot\right] & \propto & \prod_{i=1}^{n}\left[\boldsymbol{\alpha}_{i}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\right]\left[\sigma_{\alpha}^{2}\right]\\
+ & = & \text{IG}\left(\left(\frac{\sum_{i=1}^{n}\left(\boldsymbol{\alpha}_{i}-\boldsymbol{\mu}_{\alpha}\right)^{\prime}\left(\boldsymbol{\alpha}_{i}-\boldsymbol{\mu}_{\alpha}\right)}{2}+\frac{1}{r}\right)^{-1},\frac{qW\times n}{2}+q\right),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $qW$
+\end_inset
+
+ is the column dimension of 
+\begin_inset Formula $\mathbf{W}$
+\end_inset
+
+ (or length of 
+\begin_inset Formula $\boldsymbol{\alpha}_{i}$
+\end_inset
+
+).
+\end_layout
+
+\end_body
+\end_document
