@@ -160,8 +160,9 @@ start <- list(alpha=alpha,beta=beta,gamma=gamma,z=z,a=a,  # starting values
 	mu.beta=mu.beta,mu.gamma=mu.gamma,mu.alpha=mu.alpha,
 	sigma.beta=sigma.beta,sigma.gamma=sigma.gamma,sigma.alpha=sigma.alpha)  
 priors <- list(sigma.mu.alpha=1.5,sigma.mu.gamma=1.5,  # prior distribution parameters
-	sigma.mu.beta=1.5,r=2,q=1)
-# hist(sqrt(1/rgamma(1000,1,,2)))
+	sigma.mu.beta=1.5,r=2,q=0.5)
+# hist(sqrt(1/rgamma(1000,0.5,,2)),breaks=100)
+
 tune <- list(alpha=0.05)
 out1 <- occ.community.multiscale.mcmc(Y,J,groups,W,U,X,priors,start,tune,n.mcmc=10000,adapt=TRUE)  # fit model
 out1$tune
