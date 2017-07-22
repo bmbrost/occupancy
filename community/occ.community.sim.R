@@ -35,7 +35,7 @@ R <- 45  # total number of sites
 # T <- 1  # each unit surveyed once
 T <- 10  # units surveyed repeatedly through time, where T is the number of sampling periods
 	# i.e., the temporal covariate model of Royle and Dorazio (2008; Page 396)
-J <- rpois(R*T,50)  # number of surveys conducted in each unit and sampling period
+J <- rpois(R*T,30)  # number of surveys conducted in each unit and sampling period
 hist(J)
 
 
@@ -135,6 +135,7 @@ out1$keep
 idx <- 1
 matplot(out1$alpha[,,idx],type="l",lty=1);abline(h=alpha[,idx],col=1:qW,lty=2)
 matplot(out1$beta[,,idx],type="l",lty=1);abline(h=beta[,idx],col=1:qX,lty=2)
+apply(out1$beta,c(2,3),quantile,c(0.025,0.975))
 
 plot(out1$mu.alpha,type="l");abline(h=mu.alpha,col=1,lty=2);abline(h=mean(alpha),col=3,lty=2)
 matplot(out1$mu.beta,type="l");abline(h=mu.beta,col=1:2,lty=2);abline(h=rowMeans(beta),col=3,lty=2)
@@ -152,6 +153,15 @@ bwplot(time~richness,data=diversity)  # richness based on latent occurence state
 bwplot(time~hill0,data=diversity)  # richness based on Hill numbers (q=0)
 bwplot(time~hill1,data=diversity)  # Shannon diversity based on Hill numbers (q=1)
 bwplot(time~hill2,data=diversity)  # Simpson diversity based on Hill numbers (q=2)
+
+# Occupancy state
+out1$z.mean
+str(out1)
+
+tmp <- data.frame(time=X[,2],out1$z.mean)
+tmp <- gather(tmp,key="species",value=prob,2:16)
+plot(tmp[tmp$species=="X7",c(1,3)])
+apply(out1$beta[,,7],2,function(x) c(mean(x),quantile(x,c(0.025,0.975))))
 
 
 #########################################################################
