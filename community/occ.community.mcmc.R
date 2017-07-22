@@ -1,4 +1,4 @@
-occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,n.thin=1,adapt=TRUE){
 
 	#
 	#  	Brian Brost (28 JUN 2017)
@@ -53,7 +53,8 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 			out <- (sum(relative.psi^q))^(1/(1-q))
 		}
 		if(q==1){
-			out <- exp(-1*sum(relative.psi*log(relative.psi)))
+			tmp <- ifelse(relative.psi==0,0,log(relative.psi))  # per email from K. Broms on 20170711
+			out <- exp(-1*sum(relative.psi*tmp))
 		}
 		out
 	}
@@ -81,6 +82,7 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	mu.alpha <- matrix(start$mu.alpha,qW,1)  # mean for alpha	
 	mu.beta <- matrix(start$mu.beta,qX,1)  # mean for beta			
 	p <- expit(W%*%alpha)  # detection probability
+	psi <- t(apply(X,1,function(x) pnorm(x%*%beta)))  # occupancy probabilities
 	z <- start$z  # latent occupancy state
 	
 	Sigma.beta <- diag(qX)*start$sigma.beta^2  # variance-covariance of occupancy coefficients
@@ -106,17 +108,16 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 	###
 
 	
-	alpha.save <- array(0,c(n.mcmc,qW,n))
-	beta.save <- array(0,c(n.mcmc,qX,n))
+	alpha.save <- array(0,c(n.mcmc/n.thin,qW,n))
+	beta.save <- array(0,c(n.mcmc/n.thin,qX,n))
 	z.mean <- matrix(0,R,n)
-	mu.alpha.save <- matrix(0,n.mcmc,qW)
-	mu.beta.save <- matrix(0,n.mcmc,qX)
-	sigma.alpha.save <- numeric(n.mcmc)
-	sigma.beta.save <- numeric(n.mcmc)
-	richness.save <- matrix(0,n.mcmc,R)
-	hill0.save <- matrix(0,n.mcmc,R)
-	hill1.save <- matrix(0,n.mcmc,R)
-	hill2.save <- matrix(0,n.mcmc,R)
+	mu.alpha.save <- matrix(0,n.mcmc/n.thin,qW)
+	mu.beta.save <- matrix(0,n.mcmc/n.thin,qX)
+	sigma.alpha.save <- numeric(n.mcmc/n.thin)
+	sigma.beta.save <- numeric(n.mcmc/n.thin)
+	hill0.save <- matrix(0,n.mcmc/n.thin,R)
+	hill1.save <- matrix(0,n.mcmc/n.thin,R)
+	hill2.save <- matrix(0,n.mcmc/n.thin,R)
 
 	keep <- list(alpha=0)
 	keep.tmp <- keep
@@ -242,34 +243,39 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 		###
 		### Calculate Hill numbers a la Broms et al. (2015)
 		###
-		
-		hill0 <- apply(psi,1,function(x) get.hill(x,q=0))  # richness
-		hill1 <- apply(psi,1,function(x) get.hill(x,q=1))  # Shannon diversity
-		hill2 <- apply(psi,1,function(x) get.hill(x,q=2))  # Simpson diversity
+
+		hill0 <- rowSums(z)
+		# hill0 <- apply(psi*z,1,function(x) get.hill(x[x!=0],q=0))  # richness
+		hill1 <- apply(psi*z,1,function(x) get.hill(x,q=1))  # Shannon diversity
+		hill2 <- apply(psi*z,1,function(x) get.hill(x,q=2))  # Simpson diversity
 		
 		
 		###
 		###  Save samples 
 		###
 
-		alpha.save[k,,] <- alpha
-		beta.save[k,,] <- beta
-		z.mean <- z.mean+z/n.mcmc
-		mu.alpha.save[k,] <- mu.alpha
-		mu.beta.save[k,] <- mu.beta
-		sigma.beta.save[k] <- sigma.beta
-		sigma.alpha.save[k] <- sigma.alpha
-		richness.save[k,] <- rowSums(z)
-		hill0.save[k,] <- hill0
-		hill1.save[k,] <- hill1
-		hill2.save[k,] <- hill2		
-		
+		if(k%%n.thin==0){
+			k.tmp <- k/n.thin
+			alpha.save[k.tmp,,] <- alpha
+			beta.save[k.tmp,,] <- beta
+			z.mean <- z.mean+z
+			mu.alpha.save[k.tmp,] <- mu.alpha
+			mu.beta.save[k.tmp,] <- mu.beta
+			sigma.beta.save[k.tmp] <- sigma.beta
+			sigma.alpha.save[k.tmp] <- sigma.alpha
+			hill0.save[k.tmp,] <- hill0
+			hill1.save[k.tmp,] <- hill1
+			hill2.save[k.tmp,] <- hill2		
+		}
+				
 	}
 	cat("\n")
 	
 	###
 	###  Write output 
 	###
+
+	z.mean <- z.mean/(n.mcmc/n.thin)
 	
 	keep$alpha <- keep$alpha/n
 	keep <- lapply(keep,function(x) x/n.mcmc)
@@ -279,7 +285,7 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,adapt=TRUE){
 
 	list(alpha=alpha.save,beta=beta.save,z.mean=z.mean,mu.alpha=mu.alpha.save,mu.beta=mu.beta.save,
 		sigma.alpha=sigma.alpha.save,sigma.beta=sigma.beta.save,
-		richness=richness.save,hill0=hill0.save,hill1=hill1.save,hill2=hill2.save,keep=keep,end=end,
-		Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc,adapt=adapt)
+		hill0=hill0.save,hill1=hill1.save,hill2=hill2.save,keep=keep,end=end,
+		Y=Y,W=W,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc,n.thin=n.thin,adapt=adapt)
 }
 
