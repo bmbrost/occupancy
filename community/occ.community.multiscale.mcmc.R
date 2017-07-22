@@ -1,4 +1,4 @@
-occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.mcmc,adapt=TRUE){
+occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.mcmc,n.thin=1,adapt=TRUE){
 
 	#
 	#  	Brian Brost (28 JUN 2017)
@@ -54,7 +54,8 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 			out <- (sum(relative.psi^q))^(1/(1-q))
 		}
 		if(q==1){
-			out <- exp(-1*sum(relative.psi*log(relative.psi)))
+			tmp <- ifelse(relative.psi==0,0,log(relative.psi))  # per email from K. Broms on 20170711
+			out <- exp(-1*sum(relative.psi*tmp))
 		}
 		out
 	}
@@ -97,7 +98,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	Sigma.alpha <- diag(qW)*sigma.alpha
 	Sigma.alpha.inv <- solve(Sigma.alpha)	
 	sigma.gamma <- start$sigma.gamma  # standard deviation of use coefficients
-	Sigma.gamma <- diag(qX)*sigma.gamma^2
+	Sigma.gamma <- diag(qU)*sigma.gamma^2
 	Sigma.gamma.inv <- solve(Sigma.gamma)	
 	sigma.beta <- start$sigma.beta  # standard deviation of occupancy coefficients
 	Sigma.beta <- diag(qX)*sigma.beta^2
@@ -120,21 +121,21 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	###  Create receptacles for output
 	###
 	
-	alpha.save <- array(0,c(n.mcmc,qW,n))	
-	gamma.save <- array(0,c(n.mcmc,qU,n))
-	beta.save <- array(0,c(n.mcmc,qX,n))
+	alpha.save <- array(0,c(n.mcmc/n.thin,qW,n))	
+	gamma.save <- array(0,c(n.mcmc/n.thin,qU,n))
+	beta.save <- array(0,c(n.mcmc/n.thin,qX,n))
 	a.mean <- matrix(0,nrow(U),n)
 	z.mean <- matrix(0,nrow(X),n)
-	mu.alpha.save <- matrix(0,n.mcmc,qW)
-	mu.gamma.save <- matrix(0,n.mcmc,qU)
-	mu.beta.save <- matrix(0,n.mcmc,qX)
-	sigma.alpha.save <- numeric(n.mcmc)
-	sigma.gamma.save <- numeric(n.mcmc)
-	sigma.beta.save <- numeric(n.mcmc)
-	richness.save <- matrix(0,n.mcmc,nrow(z))
-	hill0.save <- matrix(0,n.mcmc,nrow(X))
-	hill1.save <- matrix(0,n.mcmc,nrow(X))
-	hill2.save <- matrix(0,n.mcmc,nrow(X))
+	mu.alpha.save <- matrix(0,n.mcmc/n.thin,qW)
+	mu.gamma.save <- matrix(0,n.mcmc/n.thin,qU)
+	mu.beta.save <- matrix(0,n.mcmc/n.thin,qX)
+	sigma.alpha.save <- numeric(n.mcmc/n.thin)
+	sigma.gamma.save <- numeric(n.mcmc/n.thin)
+	sigma.beta.save <- numeric(n.mcmc/n.thin)
+	richness.save <- matrix(0,n.mcmc/n.thin,nrow(z))
+	hill0.save <- matrix(0,n.mcmc/n.thin,nrow(X))
+	hill1.save <- matrix(0,n.mcmc/n.thin,nrow(X))
+	hill2.save <- matrix(0,n.mcmc/n.thin,nrow(X))
 	
 	keep <- list(alpha=0)  # number of MH proposals accepted
 	keep.tmp <- keep  # for adaptive tuning
@@ -225,7 +226,7 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 			z1 <- z[,i]==1
 			v.beta[z0,i] <- truncnormsamp(X[z0,]%*%beta[,i],1,-Inf,0,sum(z0))
 			v.beta[z1,i] <- truncnormsamp(X[z1,]%*%beta[,i],1,0,Inf,sum(z1))
-		
+
 			
 			###
 			###  Sample beta (psi)
@@ -363,31 +364,35 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		### Calculate unit-level diversity using Hill numbers a la Broms et al. (2015)
 		###
 		
-		hill0 <- apply(psi,1,function(x) get.hill(x,q=0))  # richness
-		hill1 <- apply(psi,1,function(x) get.hill(x,q=1))  # Shannon diversity
-		hill2 <- apply(psi,1,function(x) get.hill(x,q=2))  # Simpson diversity
+		hill0 <- rowSums(z)
+		# hill0 <- apply(psi*z,1,function(x) get.hill(x[x!=0],q=0))  # richness
+		hill1 <- apply(psi*z,1,function(x) get.hill(x,q=1))  # Shannon diversity
+		hill2 <- apply(psi*z,1,function(x) get.hill(x,q=2))  # Simpson diversity
 		
 		
 		###
 	  	###  Save samples 
 	  	###
 
-	  	alpha.save[k,,] <- alpha
-	  	gamma.save[k,,] <- gamma
-	  	beta.save[k,,] <- beta
-	  	a.mean <- a.mean+a
-	  	z.mean <- z.mean+z
-	  	mu.alpha.save[k,] <- mu.alpha
-	  	mu.gamma.save[k,] <- mu.gamma
-	  	mu.beta.save[k,] <- mu.beta
-		sigma.alpha.save[k] <- sigma.alpha
-		sigma.gamma.save[k] <- sigma.gamma
-		sigma.beta.save[k] <- sigma.beta
-		richness.save[k,] <- rowSums(z)
-		hill0.save[k,] <- hill0
-		hill1.save[k,] <- hill1
-		hill2.save[k,] <- hill2		
-		
+		if(k%%n.thin==0){
+			k.tmp <- k/n.thin
+		  	alpha.save[k.tmp,,] <- alpha
+		  	gamma.save[k.tmp,,] <- gamma
+		  	beta.save[k.tmp,,] <- beta
+		  	a.mean <- a.mean+a
+		  	z.mean <- z.mean+z
+		  	mu.alpha.save[k.tmp,] <- mu.alpha
+		  	mu.gamma.save[k.tmp,] <- mu.gamma
+		  	mu.beta.save[k.tmp,] <- mu.beta
+			sigma.alpha.save[k.tmp] <- sigma.alpha
+			sigma.gamma.save[k.tmp] <- sigma.gamma
+			sigma.beta.save[k.tmp] <- sigma.beta
+			richness.save[k.tmp,] <- rowSums(z)
+			hill0.save[k.tmp,] <- hill0
+			hill1.save[k.tmp,] <- hill1
+			hill2.save[k.tmp,] <- hill2		
+		}
+				
 	}
 	cat("\n")
 	
@@ -395,8 +400,8 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 	###  Write output 
 	###
 
-	z.mean <- z.mean/n.mcmc
-  	a.mean <- a.mean/n.mcmc
+	z.mean <- z.mean/(n.mcmc/n.thin)
+  	a.mean <- a.mean/(n.mcmc/n.thin)
 	
 	keep <- lapply(keep,function(x) x/(n.mcmc*n))
 
@@ -408,5 +413,6 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 		mu.alpha=mu.alpha.save,mu.gamma=mu.gamma.save,mu.beta=mu.beta.save,
 		sigma.alpha=sigma.alpha.save,sigma.gamma=sigma.gamma.save,sigma.beta=sigma.beta.save,
 		richness=richness.save,hill0=hill0.save,hill1=hill1.save,hill2=hill2.save,keep=keep,end=end,
-		Y=Y,J=J,groups=groups,W=W,U=U,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc)
+		Y=Y,J=J,groups=groups,W=W,U=U,X=X,priors=priors,start=start,tune=tune,n.mcmc=n.mcmc,n.thin=n.thin,
+		adapt=adapt)
 }
