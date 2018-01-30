@@ -184,9 +184,9 @@ occ.community.multiscale.mcmc <- function(Y,J,groups,W,U,X,priors,start,tune,n.m
 			p.star <- expit(W%*%alpha.star)  # detection probability
 			a1 <- a[,i]==1  # update depends only on sites that are 'used'
 		 	mh.star <- sum(dbinom(Y[a1,i],J[a1],p.star[a1],log=TRUE))+
-				dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE)
+				sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 		 	mh.0 <- sum(dbinom(Y[a1,i],J[a1],p[a1,i],log=TRUE))+
-				dnorm(alpha[,i],mu.alpha,sigma.alpha,log=TRUE)
+				sum(dnorm(alpha[,i],mu.alpha,sigma.alpha,log=TRUE))
 			if(exp(mh.star-mh.0) > runif(1)){
 				alpha[,i] <- alpha.star
 				p[,i] <- p.star

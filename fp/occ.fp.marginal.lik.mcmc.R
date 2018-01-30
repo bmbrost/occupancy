@@ -19,16 +19,13 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 	}
 
 	y.lik <- function(y,p,phi,log=FALSE){
-		tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y
+		p.tmp <- p+phi-p*phi
+		tmp <- p.tmp^y*(1-p.tmp)^(1-y)
+		# tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y  # original parameterization
+		# tmp <- (1-p)*phi^y*(1-phi)^(1-y)+p*y  # alternative, but identical, parameterization
 		if(log) tmp <- log(tmp)
 		tmp
 	}
-
-	# y.lik <- function(y,p,phi,log=FALSE){  # alternative parameterization
-		# tmp <- (1-p)*phi^y*(1-phi)^(1-y)+p*y
-		# if(log) tmp <- log(tmp)
-		# tmp
-	# }
 	
 		
 	###
@@ -40,8 +37,8 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 	qW <- ncol(W)
 	J <- apply(Y,1,function(x) sum(!is.na(x)))
 	y <- apply(Y,1,sum,na.rm=TRUE)
-	y0 <- which(y==0)
-	n.y0 <- length(y0)
+	# y0 <- which(y==0)
+	# n.y0 <- length(y0)
 
 	
 	###
@@ -76,7 +73,7 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 	z.mean <- numeric(n)
 	N.save <- numeric(n.mcmc)
 
-	keep <- list(beta=0,alpha=0)
+	keep <- list(beta=0,alpha=0,phi=0)
 	keep.tmp <- keep
 	Tb <- 50  # frequency of adaptive tuning
 	
@@ -96,6 +93,7 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 			keep.tmp <- lapply(keep.tmp,function(x) x/Tb)
 			tune$beta <- get.tune(tune$beta,keep.tmp$beta,k)
 			tune$alpha <- get.tune(tune$alpha,keep.tmp$alpha,k)
+			tune$phi <- get.tune(tune$phi,keep.tmp$phi,k)
 			keep.tmp <- lapply(keep.tmp,function(x) x*0)
 	   	} 	
 
@@ -103,8 +101,27 @@ occ.fp.marginal.lik.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=T
 		###
 		###  Sample phi
 	  	###
-		
-		phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
+
+		# Update of phi using proper full-conditional distribution that includes Y
+		z0 <- z==0
+		z1 <- z==1
+	  	phi.star <- rnorm(1,phi,tune$phi)
+	  	if(phi.star>0&phi.star<1){
+			mh.star <- sum(y.lik(Y[z1,],p[z1,],phi.star,log=TRUE))+
+				sum(dbinom(Y[z0,],1,phi.star,log=TRUE))+
+				dbinom(ctrl$v,ctrl$M,phi.star,log=TRUE)+dbeta(phi.star,priors$a,priors$b,log=TRUE)
+	 		mh.0 <-	sum(y.lik(Y[z1,],p[z1,],phi,log=TRUE))+
+				sum(dbinom(Y[z0,],1,phi,log=TRUE))+
+				dbinom(ctrl$v,ctrl$M,phi,log=TRUE)+dbeta(phi,priors$a,priors$b,log=TRUE)
+			if(exp(mh.star-mh.0) > runif(1)){
+				phi <- phi.star
+				keep$phi <- keep$phi+1
+				keep.tmp$phi <- keep.tmp$phi+1
+		  	}	  		
+	  	}
+
+		# Update of phi using 'cut' function to prevent feedback of Y in the model (see Plummer 2015)		
+		# phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
 		
 		
 	  	###

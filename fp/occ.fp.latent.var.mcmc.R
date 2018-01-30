@@ -27,7 +27,9 @@ occ.fp.latent.var.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRU
 	}
 
 	y.lik <- function(y,p,phi,log=FALSE){
-		tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y
+		p.tmp <- p+phi-p*phi
+		tmp <- p.tmp^y*(1-p.tmp)^(1-y)
+		# tmp <- (1-phi)*p^y*(1-p)^(1-y)+phi*y
 		if(log) tmp <- log(tmp)
 		tmp
 	}
@@ -42,8 +44,8 @@ occ.fp.latent.var.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRU
 	qW <- ncol(W)
 	J <- apply(Y,1,function(x) sum(!is.na(x)))
 	y <- apply(Y,1,sum,na.rm=TRUE)
-	y0 <- which(y==0)
-	n.y0 <- length(y0)
+	# y0 <- which(y==0)
+	# n.y0 <- length(y0)
 	Y0 <- ifelse(Y==1,0,1)		
 	
 	###
@@ -105,8 +107,12 @@ occ.fp.latent.var.mcmc <- function(Y,ctrl,W,X,priors,start,tune,n.mcmc,adapt=TRU
 		###
 		###  Sample phi
 	  	###
+
+		# Update of phi using proper full-conditional distribution that includes Y		
+		phi <- rbeta(1,sum(Q)+ctrl$v+priors$a,sum(1-Q)+ctrl$M-ctrl$v+priors$b)
 		
-		phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
+		# Update of phi using 'cut' function to prevent feedback of Y in the model (see Plummer 2015)	
+		# phi <- rbeta(1,ctrl$v+priors$a,ctrl$M-ctrl$v+priors$b)
 
 
 	  	###

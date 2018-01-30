@@ -1,0 +1,321 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+\usepackage{pdflscape}
+\usepackage{color}
+\usepackage{hyperref}
+
+\usepackage{sectsty}
+\partfont{\centering\normalfont\Large}
+\sectionfont{\normalfont\normalsize\scshape}
+\subsectionfont{\normalfont\normalsize\slshape}
+
+%\usepackage{titlesec}
+%\titleformat{\part}
+  %{\normalfont\Large\centering}
+  %{\thepart}
+  %{2em}
+  %{}
+  %[{\vspace{0.25cm}\titlerule[0.5pt]}\vspace{0.25cm}] 
+
+%\titleformat{\section}
+  %{\normalfont\scshape}
+  %{\thesection}
+  %{1em}
+  %{}
+
+%\titleformat{\subsection}
+  %{\normalfont\slshape}
+  %{\thesubsection}
+  %{1em}
+  %{}
+
+%\titlespacing*{\subsection}
+%{0pt}{1cm}{0pt}
+  
+% Make TOC hyperlinks
+\hypersetup{
+  colorlinks=true, %set true if you want colored links
+  linktoc=all,     %set to all if you want both sections and subsections linked
+  linkcolor=blue,  %choose some color if you want links to stand out
+  bookmarksopen=true
+}
+
+%\usepackage[nodayofweek]{datetime}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Part*
+
+\series medium
+\color black
+Classical occupancy model
+\begin_inset VSpace -0.175in
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset line
+LatexCommand rule
+offset "0ex"
+width "100col%"
+height "0.5pt"
+
+\end_inset
+
+
+\begin_inset Separator latexpar
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\align center
+
+\color black
+Brian M.
+ Brost / 12 June 2017 / Vetted: 
+\color red
+NO
+\end_layout
+
+\begin_layout Section
+Description
+\end_layout
+
+\begin_layout Standard
+A classical occupancy model that relies on replication to accommodate false
+ negative errors.
+\end_layout
+
+\begin_layout Section
+Implementation
+\end_layout
+
+\begin_layout Standard
+The file occ.sim.R simulates data according to the model statement below,
+ and occ.mcmc.R contains the MCMC algorithm for parameter estimation.
+\end_layout
+
+\begin_layout Section
+Model Statement
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $y_{ij}$
+\end_inset
+
+ be a binary observation representing a detection/non-detection, where 
+\begin_inset Formula $i=1,\ldots,N$
+\end_inset
+
+ indexes sample units and 
+\begin_inset Formula $j=1,\ldots,J_{i}$
+\end_inset
+
+ indexes replicate observations within a sample unit.
+ 
+\begin_inset Formula 
+\begin{eqnarray*}
+y_{ij} & \sim & \begin{cases}
+\text{Bern}\left(p_{ij}\right), & z_{i}=1\\
+0, & z_{i}=0
+\end{cases}\\
+z_{i} & \sim & \text{Bern}\left(\psi_{i}\right)\\
+\psi_{i} & = & \text{logit}^{-1}\left(\mathbf{x}_{i}^{\prime}\boldsymbol{\beta}\right)\\
+p_{ij} & = & \text{logit}^{-1}\left(\mathbf{w}_{ij}^{\prime}\boldsymbol{\alpha}\right)\\
+\boldsymbol{\beta} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right)\\
+\boldsymbol{\alpha} & \sim & {\cal N}\left(\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Full-conditional Distributions
+\end_layout
+
+\begin_layout Subsection
+Occupancy state (
+\begin_inset Formula $z_{i}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[z_{i}\mid\cdot\right] & \propto & \prod_{j=1}^{J_{i}}\left[y_{ij}\mid p_{ij},z_{i}\right]\left[z_{i}\mid\psi_{i}\right]\\
+ & \propto & \prod_{j=1}^{J_{i}}\text{Bern}\left(y_{ij}\mid p_{ij}\right)^{z_{i}}1_{\left\{ y_{ij}=0\right\} }^{1-z_{i}}\text{Bern}\left(z_{i}\mid\psi_{i}\right)\\
+ & \propto & \prod_{j=1}^{J_{i}}\left(p_{ij}^{y_{ij}}\left(1-p_{ij}\right)^{1-y_{ij}}\right)^{z_{i}}\left(1_{\left\{ y_{ij}=0\right\} }^{1-z_{i}}\right)\psi_{i}^{z_{i}}\left(1-\psi_{i}\right)^{1-z_{i}}\\
+ & \propto & \prod_{j=1}^{J_{i}}\left(\psi_{i}p_{ij}^{y_{ij}}\left(1-p_{ij}\right)^{1-y_{ij}}\right)^{z_{i}}\left(1_{\left\{ y_{ij}=0\right\} }\left(1-\psi_{i}\right)\right)^{1-z_{i}}\\
+ & = & \text{Bern}\left(\tilde{\psi}_{i}\right),
+\end{eqnarray*}
+
+\end_inset
+
+where,
+\begin_inset Formula 
+\begin{align*}
+\tilde{\psi}_{i} & =\frac{\psi_{i}\prod_{j=1}^{J_{i}}\left(p_{ij}^{y_{ij}}\left(1-p_{ij}\right)^{1-y_{ij}}\right)}{\psi_{i}\prod_{j=1}^{J_{i}}\left(p_{ij}^{y_{ij}}\left(1-p_{ij}\right)^{1-y_{ij}}\right)+\left(1-\psi_{i}\right)\prod_{j=1}^{J_{i}}\left(1_{\left\{ y_{ij}=0\right\} }\right)}.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Occupancy coefficients (
+\begin_inset Formula $\boldsymbol{\beta}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\beta}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\left[z_{i}\mid\psi_{i}\right]\left[\boldsymbol{\beta}\right]\\
+ & \propto & \prod_{i=1}^{N}\text{Bern}\left(z_{i}\mid\psi_{i}\right){\cal N}\left(\mathbf{\boldsymbol{\beta}}\mid\boldsymbol{\mu}_{\beta},\sigma_{\beta}^{2}\mathbf{I}\right).
+\end{eqnarray*}
+
+\end_inset
+
+The update for 
+\begin_inset Formula $\boldsymbol{\beta}$
+\end_inset
+
+ proceeds using Metropolis-Hastings.
+\end_layout
+
+\begin_layout Subsection
+Detection coefficients (
+\begin_inset Formula $\boldsymbol{\alpha}$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{eqnarray*}
+\left[\boldsymbol{\alpha}\mid\cdot\right] & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\left[y_{ij}\mid p_{ij},z_{i}\right]\left[\boldsymbol{\alpha}\right]\\
+ & \propto & \prod_{i=1}^{N}\prod_{j=1}^{J_{i}}\text{Bern}\left(y_{ij}\mid p_{ij}\right)^{z_{i}}{\cal N}\left(\mathbf{\boldsymbol{\alpha}}\mid\boldsymbol{\mu}_{\alpha},\sigma_{\alpha}^{2}\mathbf{I}\right).
+\end{eqnarray*}
+
+\end_inset
+
+The update for 
+\begin_inset Formula $\boldsymbol{\alpha}$
+\end_inset
+
+ proceeds using Metropolis-Hastings.
+ Note that the product over 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+ only includes instances of 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+ such that 
+\begin_inset Formula $z_{i}=1$
+\end_inset
+
+.
+\end_layout
+
+\end_body
+\end_document

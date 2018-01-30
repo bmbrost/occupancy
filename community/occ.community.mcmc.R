@@ -161,9 +161,9 @@ occ.community.mcmc <- function(Y,J,W,X,priors,start,tune,n.mcmc,n.thin=1,adapt=T
 			alpha.star <- rnorm(qW,alpha[,i],tune$alpha)  # proposal
 			p.star <- expit(W%*%alpha.star)  # detection probability
 		 	mh.star <- sum(dbinom(Y[z1,i],J[z1],p.star[z1],log=TRUE))+
-				dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE)
+				sum(dnorm(alpha.star,mu.alpha,sigma.alpha,log=TRUE))
 		 	mh.0 <- sum(dbinom(Y[z1,i],J[z1],p[z1,i],log=TRUE))+
-		 		dnorm(alpha[,i],mu.alpha,sigma.alpha,log=TRUE)
+		 		sum(dnorm(alpha[,i],mu.alpha,sigma.alpha,log=TRUE))
 			if(exp(mh.star-mh.0) > runif(1)){
 				alpha[,i] <- alpha.star
 				p[,i] <- p.star

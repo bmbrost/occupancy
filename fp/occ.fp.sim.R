@@ -51,6 +51,10 @@ Q <- matrix(rbinom(n*J,1,phi),n,J)  # false positive indicator variables
 Y.tilde <- Y+Q  # add false positives to data set
 Y.tilde[Y.tilde==2] <- 1
 
+# Simulate negative control dataset
+M <- 100 # negative control sample size
+ctrl <- data.frame(v=rbinom(1,M,phi),M=M)
+
 
 ###
 ### Fit standard occupancy model to dataset without false positives
@@ -80,9 +84,9 @@ barplot(table(out1$N));sum(z)  # posterior of number in 'occupied' state
 source("fp/occ.fp.marginal.lik.mcmc.R")
 start <- list(beta=beta,alpha=alpha,z=z,phi=phi)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-	sigma.beta=10,sigma.alpha=10)
-tune <- list(beta=0.35,alpha=0.1)
-out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
+	sigma.beta=10,sigma.alpha=10,a=1,b=1)
+tune <- list(beta=0.35,alpha=0.1,phi=0.05)
+out2 <- occ.fp.marginal.lik.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out2$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
@@ -91,15 +95,15 @@ apply(out2$beta,2,mean)  # posterior means for beta
 apply(out2$alpha,2,mean)  # posterior means for alpha
 boxplot(out2$z.mean~z)  # true occupancy versus estimated occupancy
 barplot(table(out2$N));sum(z)  # posterior of number in 'occupied' state
-hist(out2$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
+hist(out2$phi,breaks=100);abline(v=phi,lty=2,col=2)  # posterior for phi
 
 # Model with latent indicator variables
 source("fp/occ.fp.latent.var.mcmc.R")
 start <- list(beta=beta,alpha=alpha,z=z,phi=phi,Q=Q)  # starting values
 priors <- list(mu.beta=rep(0,qX),mu.alpha=rep(0,qW),  # prior distribution parameters
-	sigma.beta=10,sigma.alpha=10)
+	sigma.beta=10,sigma.alpha=10,a=1,b=1)
 tune <- list(beta=0.35,alpha=0.1)
-out3 <- occ.fp.latent.var.mcmc(Y.tilde,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
+out3 <- occ.fp.latent.var.mcmc(Y.tilde,ctrl,W,X,priors,start,tune,100000,adapt=TRUE)  # fit model
 
 # Examine output
 matplot(out3$beta,type="l");abline(h=beta,col=1:2,lty=2)  # posterior for beta
@@ -108,7 +112,7 @@ apply(out3$beta,2,mean)  # posterior means for beta
 apply(out3$alpha,2,mean)  # posterior means for alpha
 boxplot(out3$z.mean~z)  # true occupancy versus estimated occupancy
 barplot(table(out3$N));sum(z)  # posterior of number in 'occupied' state
-hist(out3$phi,breaks=100);abline(v=pi,lty=2,col=2)  # posterior for pi
+hist(out3$phi,breaks=100);abline(v=phi,lty=2,col=2)  # posterior for pi
 boxplot(out3$Q.mean~Q)  # true false positives versus estimated false positives
 
 apply(out3$beta,2,quantile,c(0.025,0.975))
